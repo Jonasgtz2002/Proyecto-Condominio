@@ -1,0 +1,98 @@
+import { User, RegistroAcceso, CodigoAcceso } from '@/types';
+
+export const initialUsers: User[] = [
+  {
+    id: '1',
+    nombre: 'Carlos Admin',
+    email: 'admin@condominio.com',
+    password: 'admin123',
+    rol: 'admin',
+    activo: true,
+    telefono: '555-0001',
+    createdAt: new Date('2024-01-01'),
+  },
+  {
+    id: '2',
+    nombre: 'Juan Guardia',
+    email: 'vigilante@condominio.com',
+    password: 'vigilante123',
+    rol: 'vigilante',
+    activo: true,
+    telefono: '555-0002',
+    createdAt: new Date('2024-01-15'),
+  },
+  {
+    id: '3',
+    nombre: 'María Pérez',
+    email: 'residente@condominio.com',
+    password: 'residente123',
+    rol: 'residente',
+    activo: true,
+    direccion: 'Torre A, Apto 301',
+    telefono: '555-0003',
+    createdAt: new Date('2024-02-01'),
+  },
+  {
+    id: '4',
+    nombre: 'Pedro Vigilante',
+    email: 'vigilante2@condominio.com',
+    password: 'vigilante123',
+    rol: 'vigilante',
+    activo: true,
+    telefono: '555-0004',
+    createdAt: new Date('2024-03-01'),
+  },
+  {
+    id: '5',
+    nombre: 'Ana García',
+    email: 'ana@condominio.com',
+    password: 'residente123',
+    rol: 'residente',
+    activo: true,
+    direccion: 'Torre B, Apto 502',
+    telefono: '555-0005',
+    createdAt: new Date('2024-03-10'),
+  },
+];
+
+export const initialRegistros: RegistroAcceso[] = [
+  {
+    id: '1',
+    tipo: 'entrada',
+    placa: 'ABC-123',
+    visitante: 'Carlos López',
+    motivoVisita: 'Visita familiar',
+    residenteId: '3',
+    residenteNombre: 'María Pérez',
+    vigilanteId: '2',
+    vigilanteNombre: 'Juan Guardia',
+    timestamp: new Date('2024-12-20T10:30:00'),
+    activo: false,
+  },
+  {
+    id: '2',
+    tipo: 'entrada',
+    placa: 'XYZ-789',
+    visitante: 'Laura Martínez',
+    motivoVisita: 'Entrega de paquete',
+    residenteId: '5',
+    residenteNombre: 'Ana García',
+    vigilanteId: '2',
+    vigilanteNombre: 'Juan Guardia',
+    timestamp: new Date('2024-12-22T14:15:00'),
+    activo: false,
+  },
+];
+
+export const initialCodigos: CodigoAcceso[] = [
+  {
+    id: '1',
+    codigo: 'ACC-2024-001',
+    residenteId: '3',
+    residenteNombre: 'María Pérez',
+    visitante: 'Carlos López',
+    validoHasta: new Date('2024-12-31T23:59:59'),
+    usado: true,
+    createdAt: new Date('2024-12-20T09:00:00'),
+  },
+];
