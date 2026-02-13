@@ -353,6 +353,6 @@ export default function VigilantesPage() {
           </div>
         </div>
       )}
-    </div> 
+    </div>
   );
 }

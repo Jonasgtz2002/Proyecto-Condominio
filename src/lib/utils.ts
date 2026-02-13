@@ -11,14 +11,22 @@ export function generarCodigoAcceso(): string {
   return `ACC-${timestamp}-${random}`;
 }
 
-export function formatearFecha(fecha: Date): string {
+export function formatearFecha(fecha: Date | string): string {
+  // Convertir string a Date si es necesario
+  const fechaObj = typeof fecha === 'string' ? new Date(fecha) : fecha;
+  
+  // Validar que la fecha es válida
+  if (!fechaObj || isNaN(fechaObj.getTime())) {
+    return 'Fecha inválida';
+  }
+  
   return new Intl.DateTimeFormat('es-MX', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(fecha);
+  }).format(fechaObj);
 }
 
 export function formatearPlaca(placa: string): string {

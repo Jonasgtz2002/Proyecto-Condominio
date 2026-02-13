@@ -5,6 +5,8 @@ This is a **Next.js 14+ (App Router)** condominium access control system in Type
 
 ## Key Architecture Decisions
 
+
+
 ### State Management (Zustand)
 - **Single source of truth**: [src/store/useStore.ts](../src/store/useStore.ts) manages all app state
 - **Persistence**: All state auto-persists to `localStorage` via Zustand middleware
@@ -109,6 +111,8 @@ registros.push(newRecord); // Will not trigger re-render or persist
 3. **Vehicle tracking**: `activo: true` on `RegistroAcceso` means visitor is currently inside - must flip to `false` on exit
 4. **Soft deletes**: Users are never removed from array - set `activo: false` instead
 5. **Path aliases**: `@/` maps to `src/` (configured in [tsconfig.json](../tsconfig.json#L20))
+
+
 
 ## Future Backend Integration
 When replacing localStorage with API:

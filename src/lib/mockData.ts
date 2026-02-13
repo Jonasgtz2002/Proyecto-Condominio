@@ -1,4 +1,4 @@
-import { User, RegistroAcceso, CodigoAcceso } from '@/types';
+import { User, RegistroAcceso, CodigoAcceso, Anuncio, RegistroEspecial, EstadoPagoResidente } from '@/types';
 
 export const initialUsers: User[] = [
   {
@@ -19,6 +19,7 @@ export const initialUsers: User[] = [
     rol: 'vigilante',
     activo: true,
     telefono: '555-0002',
+    turno: 'matutino',
     createdAt: new Date('2024-01-15'),
   },
   {
@@ -28,8 +29,10 @@ export const initialUsers: User[] = [
     password: 'residente123',
     rol: 'residente',
     activo: true,
-    direccion: 'Torre A, Apto 301',
-    telefono: '555-0003',
+    edificio: '3',
+    departamento: '12',
+    telefono: '7351236996',
+    matricula: '2025MEXDF1',
     createdAt: new Date('2024-02-01'),
   },
   {
@@ -40,6 +43,7 @@ export const initialUsers: User[] = [
     rol: 'vigilante',
     activo: true,
     telefono: '555-0004',
+    turno: 'vespertino',
     createdAt: new Date('2024-03-01'),
   },
   {
@@ -49,9 +53,24 @@ export const initialUsers: User[] = [
     password: 'residente123',
     rol: 'residente',
     activo: true,
-    direccion: 'Torre B, Apto 502',
+    edificio: 'B2',
+    departamento: '21',
     telefono: '555-0005',
+    matricula: 'ABC-123',
     createdAt: new Date('2024-03-10'),
+  },
+  {
+    id: '6',
+    nombre: 'Manuela Lobezna Perez',
+    email: 'manuela@condominio.com',
+    password: 'residente123',
+    rol: 'residente',
+    activo: true,
+    edificio: 'B2',
+    departamento: '21',
+    telefono: '555-0006',
+    matricula: '2025MEXDF1',
+    createdAt: new Date('2024-03-15'),
   },
 ];
 
@@ -94,5 +113,72 @@ export const initialCodigos: CodigoAcceso[] = [
     validoHasta: new Date('2024-12-31T23:59:59'),
     usado: true,
     createdAt: new Date('2024-12-20T09:00:00'),
+  },
+];
+
+export const initialAnuncios: Anuncio[] = [
+  {
+    id: '1',
+    titulo: 'Mantenimiento programado',
+    cuerpo: 'El próximo sábado 15 de febrero se realizará mantenimiento a las áreas comunes. Por favor tomar las precauciones necesarias.',
+    fecha: new Date('2025-01-15'),
+    createdBy: '1',
+    createdAt: new Date('2025-01-15'),
+  },
+  {
+    id: '2',
+    titulo: 'Reunión de propietarios',
+    cuerpo: 'Se convoca a reunión ordinaria de propietarios el día 20 de febrero a las 18:00 hrs en el salón de eventos.',
+    fecha: new Date('2025-01-20'),
+    createdBy: '1',
+    createdAt: new Date('2025-01-20'),
+  },
+];
+
+export const initialRegistrosEspeciales: RegistroEspecial[] = [
+  {
+    id: '1',
+    tipo: 'delivery',
+    conductor: 'Juan Delivery',
+    placa: 'DEL-123',
+    categoria: 'Rappi',
+    edificio: '3',
+    timestamp: new Date('2025-02-03T14:30:00'),
+    vigilanteId: '2',
+    vigilanteNombre: 'Juan Guardia',
+    activo: true,
+  },
+];
+
+export const initialEstadosPago: EstadoPagoResidente[] = [
+  {
+    residenteId: '3',
+    residenteNombre: 'María Pérez',
+    edificio: '3',
+    departamento: '12',
+    estado: 'pagado',
+    deudaTotal: 0,
+    proximoVencimiento: new Date('2026-03-24'),
+    ultimoPago: new Date('2026-01-29'),
+  },
+  {
+    residenteId: '5',
+    residenteNombre: 'Ana García',
+    edificio: 'B2',
+    departamento: '21',
+    estado: 'vencido',
+    deudaTotal: 1250,
+    proximoVencimiento: new Date('2026-03-24'),
+    ultimoPago: new Date('2025-11-15'),
+  },
+  {
+    residenteId: '6',
+    residenteNombre: 'Manuela Lobezna Perez',
+    edificio: 'B2',
+    departamento: '21',
+    estado: 'adeudo',
+    deudaTotal: 1250,
+    proximoVencimiento: new Date('2026-03-24'),
+    ultimoPago: new Date('2026-01-29'),
   },
 ];

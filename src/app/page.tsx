@@ -1,22 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
-import { Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
-  const login = useStore((state) => state.login);
+  const { login, usuarios } = useStore();
+
+  const handleResetStorage = () => {
+    if (confirm('¿Deseas resetear los datos? Esto limpiará el localStorage y recargará la página.')) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    console.log('Intentando login con:', email);
+    console.log('Usuarios disponibles:', usuarios.length);
+    console.log('Usuarios:', usuarios.map(u => ({ email: u.email, password: u.password, activo: u.activo })));
+
     const user = login(email, password);
+    console.log('Usuario encontrado:', user);
 
     if (user) {
       // Redirigir según el rol
@@ -32,7 +43,7 @@ export default function LoginPage() {
           break;
       }
     } else {
-      setError('Credenciales inválidas');
+      setError('USUARIO O CONTRASEÑA INCORRECTOS');
     }
   };
 
@@ -44,79 +55,92 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-indigo-600 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo y Título */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Control de Accesos</h1>
-          <p className="text-gray-600 mt-2">Sistema de gestión para condominios</p>
-        </div>
-
         {/* Formulario de Login */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-indigo-600 rounded-3xl shadow-2xl p-8">
+          {error && (
+            <div className="mb-6 bg-red-500 text-white px-6 py-4 rounded-2xl text-center font-bold text-lg animate-shake">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Correo electrónico
-              </label>
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="usuario@condominio.com"
+                className="w-full px-6 py-4 bg-white rounded-2xl text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white text-lg"
+                placeholder="Correo electrónico"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
-              </label>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
+                className="w-full px-6 py-4 bg-white rounded-2xl text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white text-lg"
+                placeholder="Contraseña"
                 required
               />
             </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded-2xl transition-all text-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
             >
-              Iniciar Sesión
+              Iniciar sesión
             </button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-white hover:text-gray-200 transition-colors text-base"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
           </form>
         </div>
 
         {/* Usuarios de Prueba */}
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">👤 Usuarios de prueba:</h3>
+        <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 p-6">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-white">👤 Usuarios de prueba:</h3>
+            <button
+              onClick={handleResetStorage}
+              className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition-colors"
+            >
+              Resetear Datos
+            </button>
+          </div>
           <div className="space-y-2 text-xs">
             {usuariosPrueba.map((usuario, index) => (
-              <div key={index} className="bg-gray-50 p-3 rounded border border-gray-200">
-                <div className="font-semibold text-gray-900">{usuario.rol}</div>
-                <div className="text-gray-600">Email: {usuario.email}</div>
-                <div className="text-gray-600">Password: {usuario.password}</div>
+              <div key={index} className="bg-white/20 p-3 rounded-lg border border-white/30">
+                <div className="font-semibold text-white">{usuario.rol}</div>
+                <div className="text-white">Email: {usuario.email}</div>
+                <div className="text-white">Password: {usuario.password}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }
