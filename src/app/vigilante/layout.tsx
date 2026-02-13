@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { Sidebar } from '@/components/layouts/Sidebar';
@@ -10,17 +10,35 @@ export default function VigilanteLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session, logout, isSidebarOpen } = useStore();
+  const { session, logout, isSidebarOpen, fetchMe } = useStore();
   const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!session.isAuthenticated || session.user?.rol !== 'vigilante') {
+    const restoreSession = async () => {
+      if (!session.isAuthenticated) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        if (token) {
+          try { await fetchMe(); } catch { /* token inválido */ }
+        }
+      }
+      setIsReady(true);
+    };
+    restoreSession();
+  }, []);
+
+  useEffect(() => {
+    if (isReady && (!session.isAuthenticated || session.user?.rol !== 'vigilante')) {
       router.push('/');
     }
-  }, [session, router]);
+  }, [isReady, session, router]);
 
-  if (!session.isAuthenticated || session.user?.rol !== 'vigilante') {
-    return null;
+  if (!isReady || !session.isAuthenticated || session.user?.rol !== 'vigilante') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg text-gray-500">Cargando...</p>
+      </div>
+    );
   }
 
   const handleLogout = () => {

@@ -1,131 +1,255 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Search, Filter, Plus, Edit2, Trash2, X, LogOut } from 'lucide-react';
-import { User, EstadoPago } from '@/types';
+import { ApiResidente } from '@/types';
 
 export default function UsuariosPage() {
-  const { usuarios, estadosPago, agregarUsuario, actualizarUsuario, eliminarUsuario } = useStore();
+  const {
+    residentes, pagos, edificios, departamentos,
+    fetchResidentes, fetchPagos, fetchEdificios, fetchDepartamentos,
+    agregarResidente, actualizarResidente, eliminarResidente,
+    agregarUsuario, agregarEdificio, agregarDepartamento,
+  } = useStore();
 
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEdificio, setFilterEdificio] = useState('');
   const [filterDepartamento, setFilterDepartamento] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingResidente, setEditingResidente] = useState<ApiResidente | null>(null);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Toggle: select existing or create new
+  const [crearEdificio, setCrearEdificio] = useState(false);
+  const [crearDepartamento, setCrearDepartamento] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
+    apellido: '',
     email: '',
     password: '',
     telefono: '',
-    edificio: '',
-    departamento: '',
+    id_edificio: '',
+    id_departamento: '',
     matricula: '',
+    // New edificio/depto fields
+    nuevoEdificio: '',
+    nuevoDireccion: '',
+    nuevoDepartamento: '',
   });
 
-  const residentes = useMemo(
-    () => usuarios.filter((u) => u.rol === 'residente' && u.activo),
-    [usuarios]
-  );
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await Promise.all([fetchResidentes(), fetchPagos(), fetchEdificios(), fetchDepartamentos()]);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    loadData();
+  }, []);
 
-  const getEstadoPago = (residenteId: string): EstadoPago => {
-    const estado = estadosPago.find((e) => e.residenteId === residenteId);
-    return estado?.estado || 'pagado';
+  const getEstadoPago = (residenteId: number): string => {
+    const pagoResidente = pagos.find((p) => p.id_residente_fk === residenteId);
+    return pagoResidente?.estatus || pagoResidente?.estado || 'pagado';
   };
 
   const filteredResidentes = useMemo(() => {
     return residentes.filter((residente) => {
+      const fullName = (residente.nombre || '').toLowerCase();
+      const email = residente.usuario?.correo || '';
       const matchSearch =
-        residente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        residente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (residente.matricula || '').toLowerCase().includes(searchTerm.toLowerCase());
+        fullName.includes(searchTerm.toLowerCase()) ||
+        email.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchEdificio = !filterEdificio || residente.edificio === filterEdificio;
+      const matchEdificio = !filterEdificio || residente.edificio?.num_edificio === filterEdificio;
       const matchDepartamento =
-        !filterDepartamento || residente.departamento === filterDepartamento;
+        !filterDepartamento || String(residente.departamento?.id_departamento) === filterDepartamento;
 
       return matchSearch && matchEdificio && matchDepartamento;
     });
   }, [residentes, searchTerm, filterEdificio, filterDepartamento]);
 
-  const edificios = Array.from(new Set(residentes.map((r) => r.edificio).filter(Boolean)));
-  const departamentos = Array.from(
-    new Set(residentes.map((r) => r.departamento).filter(Boolean))
+  const edificiosList = Array.from(new Set(residentes.map((r) => r.edificio?.num_edificio).filter(Boolean)));
+  const departamentosList = Array.from(
+    new Set(residentes.map((r) => r.departamento?.id_departamento).filter((v): v is number => v != null).map(String))
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Filter departamentos by selected edificio in form
+  const departamentosFiltrados = useMemo(() => {
+    if (!formData.id_edificio) return departamentos;
+    return departamentos.filter((d) => d.id_edificio_fk === Number(formData.id_edificio));
+  }, [departamentos, formData.id_edificio]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSaving(true);
 
-    const emailExists = usuarios.some(
-      (u) => u.email === formData.email && u.id !== editingUser?.id
-    );
+    try {
+      if (editingResidente) {
+        // ── Edit mode ──
+        let finalEdificioId = formData.id_edificio ? Number(formData.id_edificio) : undefined;
+        let finalDeptoId = formData.id_departamento ? Number(formData.id_departamento) : undefined;
 
-    if (emailExists) {
-      setError(`Error: el correo ${formData.email} ya existe, intente de nuevo`);
-      return;
+        if (crearEdificio && formData.nuevoEdificio.trim()) {
+          const ed = await agregarEdificio({ num_edificio: formData.nuevoEdificio.trim() });
+          finalEdificioId = ed?.id_edificio;
+        }
+        if (crearDepartamento && finalEdificioId) {
+          const dp = await agregarDepartamento({ id_edificio_fk: finalEdificioId });
+          finalDeptoId = dp?.id_departamento;
+        }
+
+        await actualizarResidente(editingResidente.id_residente, {
+          nombre: `${formData.nombre} ${formData.apellido}`.trim(),
+          telefono: formData.telefono,
+          id_edificio_fk: finalEdificioId,
+          id_departamento_fk: finalDeptoId,
+        });
+      } else {
+        // ── Create mode ──
+
+        // 1) Edificio: create new or use selected
+        let finalEdificioId: number | undefined;
+        if (crearEdificio && formData.nuevoEdificio.trim()) {
+          const ed = await agregarEdificio({ num_edificio: formData.nuevoEdificio.trim() });
+          console.log('Edificio creado:', ed);
+          finalEdificioId = ed?.id_edificio;
+          if (!finalEdificioId) {
+            // Refetch and find by name as fallback
+            await fetchEdificios();
+            const found = edificios.find((e) => e.num_edificio === formData.nuevoEdificio.trim());
+            finalEdificioId = found?.id_edificio;
+          }
+        } else if (formData.id_edificio) {
+          finalEdificioId = Number(formData.id_edificio);
+        }
+
+        // 2) Departamento: create new or use selected
+        let finalDeptoId: number | undefined;
+        if (crearDepartamento) {
+          if (!finalEdificioId) {
+            setError('Debes seleccionar o crear un edificio antes del departamento');
+            setSaving(false);
+            return;
+          }
+          const dp = await agregarDepartamento({ id_edificio_fk: finalEdificioId });
+          console.log('Departamento creado:', dp);
+          finalDeptoId = dp?.id_departamento;
+          if (!finalDeptoId) {
+            await fetchDepartamentos();
+            const found = departamentos.find((d) => d.id_edificio_fk === finalEdificioId);
+            finalDeptoId = found?.id_departamento;
+          }
+        } else if (formData.id_departamento) {
+          finalDeptoId = Number(formData.id_departamento);
+        }
+
+        // Validate that edificio and departamento were resolved
+        if (!finalEdificioId || !finalDeptoId) {
+          setError('Debes seleccionar o crear un edificio y un departamento');
+          setSaving(false);
+          return;
+        }
+
+        // 3) Create user account
+        const newUser = await agregarUsuario({
+          correo: formData.email,
+          password: formData.password || 'residente123',
+          rol: 'RESIDENTE',
+        });
+
+        const newUserId = newUser?.usuario?.id_usuario || newUser?.id_usuario || newUser?.id;
+        if (!newUserId) {
+          setError('Error al crear usuario — no se obtuvo ID');
+          setSaving(false);
+          return;
+        }
+
+        // 4) Create residente profile
+        await agregarResidente({
+          nombre: `${formData.nombre} ${formData.apellido}`.trim(),
+          telefono: formData.telefono,
+          id_usuario_fk: newUserId,
+          id_edificio_fk: finalEdificioId,
+          id_departamento_fk: finalDeptoId,
+        });
+      }
+      closeModal();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.response?.data?.error || 'Error al guardar');
+    } finally {
+      setSaving(false);
     }
-
-    if (editingUser) {
-      actualizarUsuario(editingUser.id, {
-        ...formData,
-        rol: 'residente',
-      });
-    } else {
-      agregarUsuario({
-        ...formData,
-        rol: 'residente',
-        activo: true,
-        password: formData.password || 'residente123',
-      });
-    }
-
-    closeModal();
   };
 
-  const openModal = (user?: User) => {
-    if (user) {
-      setEditingUser(user);
+  const openModal = (residente?: ApiResidente) => {
+    if (residente) {
+      setEditingResidente(residente);
+      const nameParts = (residente.nombre || '').split(' ');
       setFormData({
-        nombre: user.nombre,
-        email: user.email,
+        nombre: nameParts[0] || '',
+        apellido: nameParts.slice(1).join(' ') || '',
+        email: residente.usuario?.correo || '',
         password: '',
-        telefono: user.telefono || '',
-        edificio: user.edificio || '',
-        departamento: user.departamento || '',
-        matricula: user.matricula || '',
+        telefono: residente.telefono || '',
+        id_edificio: residente.id_edificio_fk?.toString() || '',
+        id_departamento: residente.id_departamento_fk?.toString() || '',
+        matricula: '',
+        nuevoEdificio: '',
+        nuevoDireccion: '',
+        nuevoDepartamento: '',
       });
     } else {
-      setEditingUser(null);
+      setEditingResidente(null);
       setFormData({
         nombre: '',
+        apellido: '',
         email: '',
         password: '',
         telefono: '',
-        edificio: '',
-        departamento: '',
+        id_edificio: '',
+        id_departamento: '',
         matricula: '',
+        nuevoEdificio: '',
+        nuevoDireccion: '',
+        nuevoDepartamento: '',
       });
     }
+    setCrearEdificio(false);
+    setCrearDepartamento(false);
     setError('');
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setEditingUser(null);
+    setEditingResidente(null);
     setError('');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('¿Está seguro de eliminar este residente?')) {
-      eliminarUsuario(id);
+      try {
+        await eliminarResidente(id);
+      } catch (err) {
+        console.error('Error eliminando residente:', err);
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-lg text-gray-500">Cargando residentes...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#eeeeef] px-4 sm:px-6 py-6">
@@ -201,7 +325,7 @@ export default function UsuariosPage() {
               className="h-[50px] rounded-xl border border-[#cfd3f3] bg-white px-4 text-[17px] text-slate-700 outline-none focus:ring-2 focus:ring-[#6a76c9]"
             >
               <option value="">Filtrar edificio</option>
-              {edificios.map((e) => (
+              {edificiosList.map((e) => (
                 <option key={e} value={e}>
                   {e}
                 </option>
@@ -214,7 +338,7 @@ export default function UsuariosPage() {
               className="h-[50px] rounded-xl border border-[#cfd3f3] bg-white px-4 text-[17px] text-slate-700 outline-none focus:ring-2 focus:ring-[#6a76c9]"
             >
               <option value="">Filtrar departamento</option>
-              {departamentos.map((d) => (
+              {departamentosList.map((d) => (
                 <option key={d} value={d}>
                   {d}
                 </option>
@@ -248,24 +372,24 @@ export default function UsuariosPage() {
                   </tr>
                 ) : (
                   filteredResidentes.map((residente) => {
-                    const estadoPago = getEstadoPago(residente.id);
+                    const estadoPago = getEstadoPago(residente.id_residente);
 
                     return (
-                      <tr key={residente.id} className="bg-[#f2f2f3]">
+                      <tr key={residente.id_residente} className="bg-[#f2f2f3]">
                         <td className="px-8 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
                           {residente.nombre}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
-                          {residente.edificio}
+                          {residente.edificio?.num_edificio || '-'}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
-                          {residente.departamento}
+                          {residente.departamento?.id_departamento || '-'}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
-                          {residente.email}
+                          {residente.usuario?.correo || '-'}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
-                          {residente.telefono}
+                          {residente.telefono || '-'}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2]">
                           <span
@@ -288,7 +412,7 @@ export default function UsuariosPage() {
                               <Edit2 className="h-5 w-5" />
                             </button>
                             <button
-                              onClick={() => handleDelete(residente.id)}
+                              onClick={() => handleDelete(residente.id_residente)}
                               className="p-2 rounded-lg text-[#ff5757] hover:bg-[#ffeaea] transition"
                               title="Eliminar"
                             >
@@ -322,7 +446,7 @@ export default function UsuariosPage() {
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-slate-200">
               <h2 className="text-xl font-bold text-slate-800">
-                {editingUser ? 'Editar Residente' : 'Nuevo Residente'}
+                {editingResidente ? 'Editar Residente' : 'Nuevo Residente'}
               </h2>
               <button
                 onClick={closeModal}
@@ -349,6 +473,15 @@ export default function UsuariosPage() {
               />
 
               <input
+                type="text"
+                value={formData.apellido}
+                onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                placeholder="Apellido"
+                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                required
+              />
+
+              <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -363,26 +496,83 @@ export default function UsuariosPage() {
                 onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                 placeholder="Teléfono"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
-                required
               />
 
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={formData.edificio}
-                  onChange={(e) => setFormData({ ...formData, edificio: e.target.value })}
-                  placeholder="Edificio"
-                  className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
-                  required
-                />
-                <input
-                  type="text"
-                  value={formData.departamento}
-                  onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
-                  placeholder="Departamento"
-                  className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
-                  required
-                />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-slate-700">Edificio</label>
+                  <button
+                    type="button"
+                    onClick={() => { setCrearEdificio(!crearEdificio); setFormData({ ...formData, id_edificio: '', nuevoEdificio: '', nuevoDireccion: '' }); }}
+                    className="text-xs text-[#5f6ec9] font-semibold hover:underline"
+                  >
+                    {crearEdificio ? '← Seleccionar existente' : '+ Crear nuevo'}
+                  </button>
+                </div>
+                {crearEdificio ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={formData.nuevoEdificio}
+                      onChange={(e) => setFormData({ ...formData, nuevoEdificio: e.target.value })}
+                      placeholder="Nº Edificio"
+                      className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={formData.nuevoDireccion}
+                      onChange={(e) => setFormData({ ...formData, nuevoDireccion: e.target.value })}
+                      placeholder="Dirección (opcional)"
+                      className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                    />
+                  </div>
+                ) : (
+                  <select
+                    value={formData.id_edificio}
+                    onChange={(e) => setFormData({ ...formData, id_edificio: e.target.value, id_departamento: '' })}
+                    className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                  >
+                    <option value="">Seleccionar Edificio</option>
+                    {edificios.map((ed) => (
+                      <option key={ed.id_edificio} value={ed.id_edificio}>{ed.num_edificio}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-slate-700">Departamento</label>
+                  <button
+                    type="button"
+                    onClick={() => { setCrearDepartamento(!crearDepartamento); setFormData({ ...formData, id_departamento: '', nuevoDepartamento: '' }); }}
+                    className="text-xs text-[#5f6ec9] font-semibold hover:underline"
+                  >
+                    {crearDepartamento ? '← Seleccionar existente' : '+ Crear nuevo'}
+                  </button>
+                </div>
+                {crearDepartamento ? (
+                  <input
+                    type="text"
+                    value={formData.nuevoDepartamento}
+                    onChange={(e) => setFormData({ ...formData, nuevoDepartamento: e.target.value })}
+                    placeholder="Nº Departamento"
+                    className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                    required
+                  />
+                ) : (
+                  <select
+                    value={formData.id_departamento}
+                    onChange={(e) => setFormData({ ...formData, id_departamento: e.target.value })}
+                    className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                  >
+                    <option value="">Seleccionar Departamento</option>
+                    {departamentosFiltrados.map((d) => (
+                      <option key={d.id_departamento} value={d.id_departamento}>Depto #{d.id_departamento}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <input
@@ -396,7 +586,7 @@ export default function UsuariosPage() {
                 required
               />
 
-              {!editingUser && (
+              {!editingResidente && (
                 <input
                   type="password"
                   value={formData.password}
@@ -408,9 +598,10 @@ export default function UsuariosPage() {
 
               <button
                 type="submit"
-                className="w-full h-11 rounded-lg bg-[#5f6ec9] text-white font-semibold hover:brightness-110 transition"
+                disabled={saving}
+                className="w-full h-11 rounded-lg bg-[#5f6ec9] text-white font-semibold hover:brightness-110 transition disabled:opacity-50"
               >
-                Guardar
+                {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </form>
           </div>

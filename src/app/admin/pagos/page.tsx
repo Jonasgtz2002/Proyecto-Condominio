@@ -1,9 +1,20 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 
 export default function PagosPage() {
-  const { estadosPago } = useStore();
+  const { pagos, fetchPagos } = useStore();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try { await fetchPagos(); }
+      catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    loadData();
+  }, []);
 
   const estadoUI = (estado: string) => {
     switch (estado) {
@@ -13,10 +24,20 @@ export default function PagosPage() {
         return { label: 'Pago Vencido', dot: 'bg-[#E25B52]' };
       case 'adeudo':
         return { label: 'Adeudo', dot: 'bg-[#F2C94C]' };
+      case 'pendiente':
+        return { label: 'Pendiente', dot: 'bg-[#F2C94C]' };
       default:
-        return { label: estado, dot: 'bg-gray-400' };
+        return { label: estado || 'Sin estado', dot: 'bg-gray-400' };
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-lg text-gray-500">Cargando pagos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white px-8 py-8">
@@ -56,8 +77,8 @@ export default function PagosPage() {
                   <th className="w-[16%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
                     Deuda total
                   </th>
-                  <th className="w-[18%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
-                    Próximo vencimiento
+                  <th className="w-[16%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
+                    Fecha límite
                   </th>
                   <th className="w-[16%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
                     Último pago
@@ -66,17 +87,19 @@ export default function PagosPage() {
               </thead>
 
               <tbody>
-                {estadosPago.map((pago) => {
-                  const ui = estadoUI(pago.estado);
+                {pagos.map((pago) => {
+                  const ui = estadoUI(pago.estatus || pago.estado || '');
 
                   return (
                     <tr
-                      key={pago.residenteId}
+                      key={pago.id_pago}
                       className="border-t border-gray-200 hover:bg-gray-50"
                     >
                       {/* Residente */}
                       <td className="px-6 py-5 text-gray-900">
-                        {pago.residenteNombre || 'Nombre'}
+                        {pago.residente
+                          ? pago.residente.nombre
+                          : 'Sin residente'}
                       </td>
 
                       {/* Estado (dot + label) */}
@@ -87,30 +110,29 @@ export default function PagosPage() {
                         </div>
                       </td>
 
-                      {/* Deuda */}
+                      {/* Monto */}
                       <td className="px-6 py-5 text-center font-semibold text-gray-900">
-                        ${Number(pago.deudaTotal || 0).toLocaleString('es-MX')}
+                        ${Number(pago.monto || 0).toLocaleString('es-MX')}
                       </td>
 
-                      {/* Próximo vencimiento */}
+                      {/* Fecha límite */}
                       <td className="px-6 py-5 text-center text-gray-900">
-                        {pago.proximoVencimiento
-                          ? new Date(pago.proximoVencimiento).toLocaleDateString('es-MX')
+                        {pago.fecha_vencimiento
+                          ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-MX')
                           : '--/--/----'}
                       </td>
 
                       {/* Último pago */}
                       <td className="px-6 py-5 text-center text-gray-900">
-                        {pago.ultimoPago
-                          ? new Date(pago.ultimoPago).toLocaleDateString('es-MX')
-                          : '--/--/----'}
+                        {pago.fecha_ultimopago
+                          ? new Date(pago.fecha_ultimopago).toLocaleDateString('es-MX')
+                          : '-'}
                       </td>
                     </tr>
                   );
                 })}
 
-                {/* Opcional: si no hay data, que no se vea vacío */}
-                {estadosPago.length === 0 && (
+                {pagos.length === 0 && (
                   <tr className="border-t border-gray-200">
                     <td
                       colSpan={5}

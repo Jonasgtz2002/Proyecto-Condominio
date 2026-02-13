@@ -1,376 +1,710 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, RegistroAcceso, CodigoAcceso, SessionState, Anuncio, RegistroEspecial, EstadoPagoResidente } from '@/types';
-import { initialUsers, initialRegistros, initialCodigos, initialAnuncios, initialRegistrosEspeciales, initialEstadosPago } from '@/lib/mockData';
+import {
+  SessionState,
+  ApiResidente,
+  ApiVigilante,
+  ApiAcceso,
+  ApiAnuncio,
+  ApiPago,
+  ApiCajon,
+  ApiMatricula,
+  ApiEdificio,
+  ApiDepartamento,
+  ApiVisitante,
+  ApiAdministrador,
+} from '@/types';
+import { authService } from '@/services/auth.service';
+import { residentesService } from '@/services/residentes.service';
+import { vigilantesService } from '@/services/vigilantes.service';
+import { administradoresService } from '@/services/administradores.service';
+import { accesosService } from '@/services/accesos.service';
+import { anunciosService } from '@/services/anuncios.service';
+import { pagosService } from '@/services/pagos.service';
+import { cajonesService } from '@/services/cajones.service';
+import { matriculasService } from '@/services/matriculas.service';
+import { edificiosService } from '@/services/edificios.service';
+import { departamentosService } from '@/services/departamentos.service';
+import { visitantesService } from '@/services/visitantes.service';
+import { usersService } from '@/services/users.service';
 
 interface AppState {
   // Session
   session: SessionState;
-  login: (email: string, password: string) => User | null;
+  login: (correo: string, password: string) => Promise<any>;
   logout: () => void;
-  
+  fetchMe: () => Promise<void>;
+
   // Sidebar
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (isOpen: boolean) => void;
-  
-  // Users
-  usuarios: User[];
-  agregarUsuario: (usuario: Omit<User, 'id' | 'createdAt'>) => void;
-  actualizarUsuario: (id: string, datos: Partial<User>) => void;
-  eliminarUsuario: (id: string) => void;
-  
-  // Registros de Acceso
-  registros: RegistroAcceso[];
-  registrarEntrada: (registro: Omit<RegistroAcceso, 'id' | 'timestamp' | 'tipo' | 'activo'>) => void;
-  registrarSalida: (placa: string, vigilanteId: string, vigilanteNombre: string) => void;
-  obtenerVisitantesActivos: () => RegistroAcceso[];
-  obtenerHistorialResidente: (residenteId: string) => RegistroAcceso[];
-  buscarPorMatricula: (matricula: string) => User | null;
-  
-  // Códigos de Acceso
-  codigos: CodigoAcceso[];
-  generarCodigoAcceso: (residenteId: string, residenteNombre: string, visitante: string, horasValidez: number) => CodigoAcceso;
-  validarCodigo: (codigo: string) => CodigoAcceso | null;
-  marcarCodigoUsado: (codigo: string) => void;
-  
-  // Anuncios
-  anuncios: Anuncio[];
-  agregarAnuncio: (anuncio: Omit<Anuncio, 'id' | 'createdAt'>) => void;
-  actualizarAnuncio: (id: string, datos: Partial<Anuncio>) => void;
-  eliminarAnuncio: (id: string) => void;
-  
-  // Registros Especiales
-  registrosEspeciales: RegistroEspecial[];
-  registrarIngresoEspecial: (registro: Omit<RegistroEspecial, 'id' | 'timestamp' | 'activo'>) => void;
-  registrarSalidaEspecial: (id: string) => void;
-  eliminarRegistroEspecial: (id: string) => void;
-  obtenerRegistrosEspecialesActivos: () => RegistroEspecial[];
-  
-  // Estados de Pago
-  estadosPago: EstadoPagoResidente[];
-  actualizarEstadoPago: (residenteId: string, datos: Partial<EstadoPagoResidente>) => void;
-}
 
-// Función para deserializar fechas del localStorage
-const deserializeDates = (state: any) => {
-  // Convertir fechas en usuarios
-  if (state.usuarios) {
-    state.usuarios = state.usuarios.map((u: any) => ({
-      ...u,
-      createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
-    }));
-  }
-  
-  // Convertir fechas en registros
-  if (state.registros) {
-    state.registros = state.registros.map((r: any) => ({
-      ...r,
-      timestamp: r.timestamp ? new Date(r.timestamp) : new Date(),
-    }));
-  }
-  
-  // Convertir fechas en códigos
-  if (state.codigos) {
-    state.codigos = state.codigos.map((c: any) => ({
-      ...c,
-      validoHasta: c.validoHasta ? new Date(c.validoHasta) : new Date(),
-      createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
-    }));
-  }
-  
-  // Convertir fechas en anuncios
-  if (state.anuncios) {
-    state.anuncios = state.anuncios.map((a: any) => ({
-      ...a,
-      fecha: a.fecha ? new Date(a.fecha) : new Date(),
-      createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
-    }));
-  }
-  
-  // Convertir fechas en registros especiales
-  if (state.registrosEspeciales) {
-    state.registrosEspeciales = state.registrosEspeciales.map((r: any) => ({
-      ...r,
-      timestamp: r.timestamp ? new Date(r.timestamp) : new Date(),
-    }));
-  }
-  
-  // Convertir fechas en estados de pago
-  if (state.estadosPago) {
-    state.estadosPago = state.estadosPago.map((e: any) => ({
-      ...e,
-      proximoVencimiento: e.proximoVencimiento ? new Date(e.proximoVencimiento) : new Date(),
-      ultimoPago: e.ultimoPago ? new Date(e.ultimoPago) : null,
-    }));
-  }
-  
-  return state;
-};
+  // Loading
+  loading: boolean;
+
+  // ── Data arrays (populated from API) ──
+  residentes: ApiResidente[];
+  vigilantes: ApiVigilante[];
+  administradores: ApiAdministrador[];
+  edificios: ApiEdificio[];
+  departamentos: ApiDepartamento[];
+  visitantes: ApiVisitante[];
+  visitantesActivos: ApiVisitante[];
+  cajones: ApiCajon[];
+  matriculas: ApiMatricula[];
+  accesos: ApiAcceso[];
+  accesosHoy: ApiAcceso[];
+  pagos: ApiPago[];
+  pagosPendientes: ApiPago[];
+  pagosVencidos: ApiPago[];
+  anuncios: ApiAnuncio[];
+  usuarios: any[];
+
+  // ── Fetch functions ──
+  fetchResidentes: () => Promise<void>;
+  fetchVigilantes: () => Promise<void>;
+  fetchAdministradores: () => Promise<void>;
+  fetchEdificios: () => Promise<void>;
+  fetchDepartamentos: () => Promise<void>;
+  fetchVisitantes: () => Promise<void>;
+  fetchVisitantesActivos: () => Promise<void>;
+  fetchCajones: () => Promise<void>;
+  fetchMatriculas: () => Promise<void>;
+  fetchAccesos: () => Promise<void>;
+  fetchAccesosHoy: () => Promise<void>;
+  fetchAccesosPorResidente: (residenteId: number) => Promise<ApiAcceso[]>;
+  fetchPagos: () => Promise<void>;
+  fetchPagosPendientes: () => Promise<void>;
+  fetchPagosVencidos: () => Promise<void>;
+  fetchPagosPorResidente: (residenteId: number) => Promise<ApiPago[]>;
+  fetchAnuncios: () => Promise<void>;
+  fetchUsuarios: () => Promise<void>;
+
+  // ── CRUD Residentes ──
+  agregarResidente: (data: any) => Promise<void>;
+  actualizarResidente: (id: number, data: any) => Promise<void>;
+  eliminarResidente: (id: number) => Promise<void>;
+
+  // ── CRUD Vigilantes ──
+  agregarVigilante: (data: any) => Promise<void>;
+  actualizarVigilante: (id: number, data: any) => Promise<void>;
+  eliminarVigilante: (id: number) => Promise<void>;
+
+  // ── CRUD Visitantes ──
+  agregarVisitante: (data: any) => Promise<void>;
+  registrarEntradaVisitante: (id: number) => Promise<void>;
+  registrarSalidaVisitante: (id: number) => Promise<void>;
+
+  // ── CRUD Accesos ──
+  registrarAcceso: (data: any) => Promise<void>;
+
+  // ── CRUD Pagos ──
+  agregarPago: (data: any) => Promise<void>;
+  actualizarPago: (id: number, data: any) => Promise<void>;
+  eliminarPago: (id: number) => Promise<void>;
+
+  // ── CRUD Anuncios ──
+  agregarAnuncio: (data: any) => Promise<void>;
+  actualizarAnuncio: (id: number, data: any) => Promise<void>;
+  eliminarAnuncio: (id: number) => Promise<void>;
+
+  // ── CRUD Cajones ──
+  agregarCajon: (data: any) => Promise<void>;
+  actualizarCajon: (id: number, data: any) => Promise<void>;
+  eliminarCajon: (id: number) => Promise<void>;
+
+  // ── CRUD Matriculas ──
+  agregarMatricula: (data: any) => Promise<void>;
+  actualizarMatricula: (id: number, data: any) => Promise<void>;
+  eliminarMatricula: (id: number) => Promise<void>;
+
+  // ── CRUD Edificios ──
+  agregarEdificio: (data: any) => Promise<any>;
+  actualizarEdificio: (id: number, data: any) => Promise<void>;
+  eliminarEdificio: (id: number) => Promise<void>;
+
+  // ── CRUD Departamentos ──
+  agregarDepartamento: (data: any) => Promise<any>;
+  actualizarDepartamento: (id: number, data: any) => Promise<void>;
+  eliminarDepartamento: (id: number) => Promise<void>;
+
+  // ── CRUD Users (admin) ──
+  agregarUsuario: (data: any) => Promise<any>;
+  actualizarUsuario: (id: number, data: any) => Promise<void>;
+  eliminarUsuario: (id: number) => Promise<void>;
+  bloquearUsuario: (id: number) => Promise<void>;
+  desbloquearUsuario: (id: number) => Promise<void>;
+
+  // ── Helpers ──
+  buscarPorMatricula: (matricula: string) => ApiMatricula | undefined;
+}
 
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Session
+      // ────────────── Session ──────────────
       session: {
         user: null,
+        token: null,
         isAuthenticated: false,
       },
-      
-      // Sidebar
-      isSidebarOpen: false,
-      
-      toggleSidebar: () => {
-        set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));
-      },
-      
-      setSidebarOpen: (isOpen: boolean) => {
-        set({ isSidebarOpen: isOpen });
-      },
-      
-      login: (email: string, password: string) => {
-        const usuario = get().usuarios.find(
-          (u) => u.email === email && u.password === password && u.activo
-        );
-        
-        if (usuario) {
+
+      loading: false,
+
+      login: async (correo: string, password: string) => {
+        try {
+          const res = await authService.login({ correo, password });
+          const { token, usuario } = res.data;
+          // Normalize role: ADMINISTRADOR -> admin, VIGILANTE -> vigilante, RESIDENTE -> residente
+          const rolMap: Record<string, string> = {
+            ADMINISTRADOR: 'admin',
+            VIGILANTE: 'vigilante',
+            RESIDENTE: 'residente',
+          };
+          const user = {
+            ...usuario,
+            rol: rolMap[usuario.rol?.toUpperCase()] || usuario.rol?.toLowerCase() || usuario.rol,
+          };
+
+          // Store token
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', token);
+          }
+
+          // Fetch profile based on role
+          let profile: any = null;
+          try {
+            if (user.rol === 'residente') {
+              const profileRes = await residentesService.getByUsuario(user.id);
+              profile = profileRes.data;
+            } else if (user.rol === 'vigilante') {
+              const profileRes = await vigilantesService.getByUsuario(user.id);
+              profile = profileRes.data;
+            } else if (user.rol === 'admin') {
+              const profileRes = await administradoresService.getByUsuario(user.id);
+              profile = profileRes.data;
+            }
+          } catch {
+            // Profile fetch may fail, continue with basic user info
+          }
+
+          const sessionUser = {
+            ...user,
+            ...(profile || {}),
+            apiUserId: user.id,
+          };
+
           set({
             session: {
-              user: usuario,
+              user: sessionUser,
+              token,
               isAuthenticated: true,
             },
           });
-          return usuario;
+
+          return sessionUser;
+        } catch (error: any) {
+          console.error('Login error:', error);
+          return null;
         }
-        return null;
       },
-      
+
       logout: () => {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+        }
         set({
-          session: {
-            user: null,
-            isAuthenticated: false,
-          },
+          session: { user: null, token: null, isAuthenticated: false },
+          residentes: [],
+          vigilantes: [],
+          administradores: [],
+          accesos: [],
+          accesosHoy: [],
+          anuncios: [],
+          pagos: [],
+          pagosPendientes: [],
+          pagosVencidos: [],
+          cajones: [],
+          matriculas: [],
+          visitantes: [],
+          visitantesActivos: [],
+          edificios: [],
+          departamentos: [],
+          usuarios: [],
         });
       },
-      
-      // Users
-      usuarios: initialUsers,
-      
-      agregarUsuario: (usuario) => {
-        const nuevoUsuario: User = {
-          ...usuario,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-        };
-        set((state) => ({
-          usuarios: [...state.usuarios, nuevoUsuario],
-        }));
-      },
-      
-      actualizarUsuario: (id, datos) => {
-        set((state) => ({
-          usuarios: state.usuarios.map((u) =>
-            u.id === id ? { ...u, ...datos } : u
-          ),
-        }));
-      },
-      
-      eliminarUsuario: (id) => {
-        set((state) => ({
-          usuarios: state.usuarios.map((u) =>
-            u.id === id ? { ...u, activo: false } : u
-          ),
-        }));
-      },
-      
-      // Registros de Acceso
-      registros: initialRegistros,
-      
-      registrarEntrada: (registro) => {
-        const nuevoRegistro: RegistroAcceso = {
-          ...registro,
-          id: Date.now().toString(),
-          tipo: 'entrada',
-          timestamp: new Date(),
-          activo: true,
-        };
-        set((state) => ({
-          registros: [...state.registros, nuevoRegistro],
-        }));
-      },
-      
-      registrarSalida: (placa, vigilanteId, vigilanteNombre) => {
-        // Buscar el registro de entrada activo
-        const registroEntrada = get().registros.find(
-          (r) => r.placa.toUpperCase() === placa.toUpperCase() && r.activo
-        );
-        
-        if (registroEntrada) {
-          // Marcar entrada como inactiva
-          set((state) => ({
-            registros: state.registros.map((r) =>
-              r.id === registroEntrada.id ? { ...r, activo: false } : r
-            ),
-          }));
-          
-          // Crear registro de salida
-          const nuevoRegistro: RegistroAcceso = {
-            id: Date.now().toString(),
-            tipo: 'salida',
-            placa: placa.toUpperCase(),
-            visitante: registroEntrada.visitante,
-            residenteId: registroEntrada.residenteId,
-            residenteNombre: registroEntrada.residenteNombre,
-            vigilanteId,
-            vigilanteNombre,
-            timestamp: new Date(),
-            activo: false,
+
+      fetchMe: async () => {
+        try {
+          const res = await authService.me();
+          const rawUser = res.data;
+          const rolMap: Record<string, string> = {
+            ADMINISTRADOR: 'admin',
+            VIGILANTE: 'vigilante',
+            RESIDENTE: 'residente',
           };
-          
-          set((state) => ({
-            registros: [...state.registros, nuevoRegistro],
-          }));
+          const user = {
+            ...rawUser,
+            rol: rolMap[rawUser.rol?.toUpperCase()] || rawUser.rol?.toLowerCase() || rawUser.rol,
+          };
+
+          let profile: any = null;
+          try {
+            if (user.rol === 'residente') {
+              const profileRes = await residentesService.getByUsuario(user.id);
+              profile = profileRes.data;
+            } else if (user.rol === 'vigilante') {
+              const profileRes = await vigilantesService.getByUsuario(user.id);
+              profile = profileRes.data;
+            } else if (user.rol === 'admin') {
+              const profileRes = await administradoresService.getByUsuario(user.id);
+              profile = profileRes.data;
+            }
+          } catch {
+            // Profile fetch may fail
+          }
+
+          const sessionUser = {
+            ...user,
+            ...(profile || {}),
+            apiUserId: user.id,
+          };
+
+          set({
+            session: {
+              ...get().session,
+              user: sessionUser,
+              isAuthenticated: true,
+            },
+          });
+        } catch {
+          set({
+            session: { user: null, token: null, isAuthenticated: false },
+          });
         }
       },
-      
-      obtenerVisitantesActivos: () => {
-        return get().registros.filter((r) => r.activo);
+
+      // ────────────── Sidebar ──────────────
+      isSidebarOpen: false,
+
+      toggleSidebar: () => {
+        set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));
       },
-      
-      obtenerHistorialResidente: (residenteId) => {
-        return get().registros
-          .filter((r) => r.residenteId === residenteId)
-          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+      setSidebarOpen: (isOpen: boolean) => {
+        set({ isSidebarOpen: isOpen });
       },
-      
-      buscarPorMatricula: (matricula) => {
-        return get().usuarios.find(
-          (u) => u.rol === 'residente' && 
-                 u.matricula?.toUpperCase() === matricula.toUpperCase() &&
-                 u.activo
-        ) || null;
+
+      // ────────────── Data arrays (empty initial) ──────────────
+      residentes: [],
+      vigilantes: [],
+      administradores: [],
+      edificios: [],
+      departamentos: [],
+      visitantes: [],
+      visitantesActivos: [],
+      cajones: [],
+      matriculas: [],
+      accesos: [],
+      accesosHoy: [],
+      pagos: [],
+      pagosPendientes: [],
+      pagosVencidos: [],
+      anuncios: [],
+      usuarios: [],
+
+      // ────────────── Fetch functions ──────────────
+      fetchResidentes: async () => {
+        try {
+          const res = await residentesService.getAll();
+          set({ residentes: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching residentes:', e); }
       },
-      
-      // Códigos de Acceso
-      codigos: initialCodigos,
-      
-      generarCodigoAcceso: (residenteId, residenteNombre, visitante, horasValidez) => {
-        const nuevoCodigo: CodigoAcceso = {
-          id: Date.now().toString(),
-          codigo: `ACC-${Date.now().toString().slice(-8)}`,
-          residenteId,
-          residenteNombre,
-          visitante,
-          validoHasta: new Date(Date.now() + horasValidez * 60 * 60 * 1000),
-          usado: false,
-          createdAt: new Date(),
-        };
-        
-        set((state) => ({
-          codigos: [...state.codigos, nuevoCodigo],
-        }));
-        
-        return nuevoCodigo;
+
+      fetchVigilantes: async () => {
+        try {
+          const res = await vigilantesService.getAll();
+          set({ vigilantes: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching vigilantes:', e); }
       },
-      
-      validarCodigo: (codigo) => {
-        const codigoEncontrado = get().codigos.find((c) => c.codigo === codigo);
-        
-        if (!codigoEncontrado) return null;
-        if (codigoEncontrado.usado) return null;
-        if (new Date() > codigoEncontrado.validoHasta) return null;
-        
-        return codigoEncontrado;
+
+      fetchAdministradores: async () => {
+        try {
+          const res = await administradoresService.getAll();
+          set({ administradores: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching administradores:', e); }
       },
-      
-      marcarCodigoUsado: (codigo) => {
-        set((state) => ({
-          codigos: state.codigos.map((c) =>
-            c.codigo === codigo ? { ...c, usado: true } : c
-          ),
-        }));
+
+      fetchEdificios: async () => {
+        try {
+          const res = await edificiosService.getAll();
+          set({ edificios: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching edificios:', e); }
       },
-      
-      // Anuncios
-      anuncios: initialAnuncios,
-      
-      agregarAnuncio: (anuncio) => {
-        const nuevoAnuncio: Anuncio = {
-          ...anuncio,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-        };
-        set((state) => ({
-          anuncios: [...state.anuncios, nuevoAnuncio],
-        }));
+
+      fetchDepartamentos: async () => {
+        try {
+          const res = await departamentosService.getAll();
+          set({ departamentos: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching departamentos:', e); }
       },
-      
-      actualizarAnuncio: (id, datos) => {
-        set((state) => ({
-          anuncios: state.anuncios.map((a) =>
-            a.id === id ? { ...a, ...datos } : a
-          ),
-        }));
+
+      fetchVisitantes: async () => {
+        try {
+          const res = await visitantesService.getAll();
+          set({ visitantes: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching visitantes:', e); }
       },
-      
-      eliminarAnuncio: (id) => {
-        set((state) => ({
-          anuncios: state.anuncios.filter((a) => a.id !== id),
-        }));
+
+      fetchVisitantesActivos: async () => {
+        try {
+          const res = await visitantesService.getActivos();
+          set({ visitantesActivos: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching visitantes activos:', e); }
       },
-      
-      // Registros Especiales
-      registrosEspeciales: initialRegistrosEspeciales,
-      
-      registrarIngresoEspecial: (registro) => {
-        const nuevoRegistro: RegistroEspecial = {
-          ...registro,
-          id: Date.now().toString(),
-          timestamp: new Date(),
-          activo: true,
-        };
-        set((state) => ({
-          registrosEspeciales: [...state.registrosEspeciales, nuevoRegistro],
-        }));
+
+      fetchCajones: async () => {
+        try {
+          const res = await cajonesService.getAll();
+          set({ cajones: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching cajones:', e); }
       },
-      
-      registrarSalidaEspecial: (id) => {
-        set((state) => ({
-          registrosEspeciales: state.registrosEspeciales.map((r) =>
-            r.id === id ? { ...r, activo: false } : r
-          ),
-        }));
+
+      fetchMatriculas: async () => {
+        try {
+          const res = await matriculasService.getAll();
+          set({ matriculas: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching matriculas:', e); }
       },
-      
-      eliminarRegistroEspecial: (id) => {
-        set((state) => ({
-          registrosEspeciales: state.registrosEspeciales.filter((r) => r.id !== id),
-        }));
+
+      fetchAccesos: async () => {
+        try {
+          const res = await accesosService.getAll();
+          set({ accesos: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching accesos:', e); }
       },
-      
-      obtenerRegistrosEspecialesActivos: () => {
-        return get().registrosEspeciales.filter((r) => r.activo);
+
+      fetchAccesosHoy: async () => {
+        try {
+          const res = await accesosService.getHoy();
+          set({ accesosHoy: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching accesos hoy:', e); }
       },
-      
-      // Estados de Pago
-      estadosPago: initialEstadosPago,
-      
-      actualizarEstadoPago: (residenteId, datos) => {
-        set((state) => ({
-          estadosPago: state.estadosPago.map((e) =>
-            e.residenteId === residenteId ? { ...e, ...datos } : e
-          ),
-        }));
+
+      fetchAccesosPorResidente: async (residenteId: number) => {
+        try {
+          const res = await accesosService.getByResidente(residenteId);
+          return Array.isArray(res.data) ? res.data : [];
+        } catch (e) {
+          console.error('Error fetching accesos por residente:', e);
+          return [];
+        }
+      },
+
+      fetchPagos: async () => {
+        try {
+          const res = await pagosService.getAll();
+          set({ pagos: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching pagos:', e); }
+      },
+
+      fetchPagosPendientes: async () => {
+        try {
+          const res = await pagosService.getPendientes();
+          set({ pagosPendientes: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching pagos pendientes:', e); }
+      },
+
+      fetchPagosVencidos: async () => {
+        try {
+          const res = await pagosService.getVencidos();
+          set({ pagosVencidos: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching pagos vencidos:', e); }
+      },
+
+      fetchPagosPorResidente: async (residenteId: number) => {
+        try {
+          const res = await pagosService.getByResidente(residenteId);
+          return Array.isArray(res.data) ? res.data : [];
+        } catch (e) {
+          console.error('Error fetching pagos por residente:', e);
+          return [];
+        }
+      },
+
+      fetchAnuncios: async () => {
+        try {
+          const res = await anunciosService.getAll();
+          set({ anuncios: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching anuncios:', e); }
+      },
+
+      fetchUsuarios: async () => {
+        try {
+          const res = await usersService.getAll();
+          set({ usuarios: Array.isArray(res.data) ? res.data : [] });
+        } catch (e) { console.error('Error fetching usuarios:', e); }
+      },
+
+      // ────────────── CRUD Residentes ──────────────
+      agregarResidente: async (data) => {
+        try {
+          await residentesService.create(data);
+          await get().fetchResidentes();
+        } catch (e) { console.error('Error creating residente:', e); throw e; }
+      },
+
+      actualizarResidente: async (id, data) => {
+        try {
+          await residentesService.update(id, data);
+          await get().fetchResidentes();
+        } catch (e) { console.error('Error updating residente:', e); throw e; }
+      },
+
+      eliminarResidente: async (id) => {
+        try {
+          await residentesService.delete(id);
+          await get().fetchResidentes();
+        } catch (e) { console.error('Error deleting residente:', e); throw e; }
+      },
+
+      // ────────────── CRUD Vigilantes ──────────────
+      agregarVigilante: async (data) => {
+        try {
+          await vigilantesService.create(data);
+          await get().fetchVigilantes();
+        } catch (e) { console.error('Error creating vigilante:', e); throw e; }
+      },
+
+      actualizarVigilante: async (id, data) => {
+        try {
+          await vigilantesService.update(id, data);
+          await get().fetchVigilantes();
+        } catch (e) { console.error('Error updating vigilante:', e); throw e; }
+      },
+
+      eliminarVigilante: async (id) => {
+        try {
+          await vigilantesService.delete(id);
+          await get().fetchVigilantes();
+        } catch (e) { console.error('Error deleting vigilante:', e); throw e; }
+      },
+
+      // ────────────── CRUD Visitantes ──────────────
+      agregarVisitante: async (data) => {
+        try {
+          await visitantesService.create(data);
+          await get().fetchVisitantes();
+        } catch (e) { console.error('Error creating visitante:', e); throw e; }
+      },
+
+      registrarEntradaVisitante: async (id) => {
+        try {
+          await visitantesService.registrarEntrada(id);
+          await get().fetchVisitantesActivos();
+        } catch (e) { console.error('Error registrando entrada:', e); throw e; }
+      },
+
+      registrarSalidaVisitante: async (id) => {
+        try {
+          await visitantesService.registrarSalida(id);
+          await get().fetchVisitantesActivos();
+        } catch (e) { console.error('Error registrando salida:', e); throw e; }
+      },
+
+      // ────────────── CRUD Accesos ──────────────
+      registrarAcceso: async (data) => {
+        try {
+          await accesosService.create(data);
+          await get().fetchAccesos();
+        } catch (e) { console.error('Error registrando acceso:', e); throw e; }
+      },
+
+      // ────────────── CRUD Pagos ──────────────
+      agregarPago: async (data) => {
+        try {
+          await pagosService.create(data);
+          await get().fetchPagos();
+        } catch (e) { console.error('Error creating pago:', e); throw e; }
+      },
+
+      actualizarPago: async (id, data) => {
+        try {
+          await pagosService.update(id, data);
+          await get().fetchPagos();
+        } catch (e) { console.error('Error updating pago:', e); throw e; }
+      },
+
+      eliminarPago: async (id) => {
+        try {
+          await pagosService.delete(id);
+          await get().fetchPagos();
+        } catch (e) { console.error('Error deleting pago:', e); throw e; }
+      },
+
+      // ────────────── CRUD Anuncios ──────────────
+      agregarAnuncio: async (data) => {
+        try {
+          await anunciosService.create(data);
+          await get().fetchAnuncios();
+        } catch (e) { console.error('Error creating anuncio:', e); throw e; }
+      },
+
+      actualizarAnuncio: async (id, data) => {
+        try {
+          await anunciosService.update(id, data);
+          await get().fetchAnuncios();
+        } catch (e) { console.error('Error updating anuncio:', e); throw e; }
+      },
+
+      eliminarAnuncio: async (id) => {
+        try {
+          await anunciosService.delete(id);
+          await get().fetchAnuncios();
+        } catch (e) { console.error('Error deleting anuncio:', e); throw e; }
+      },
+
+      // ────────────── CRUD Cajones ──────────────
+      agregarCajon: async (data) => {
+        try {
+          await cajonesService.create(data);
+          await get().fetchCajones();
+        } catch (e) { console.error('Error creating cajon:', e); throw e; }
+      },
+
+      actualizarCajon: async (id, data) => {
+        try {
+          await cajonesService.update(id, data);
+          await get().fetchCajones();
+        } catch (e) { console.error('Error updating cajon:', e); throw e; }
+      },
+
+      eliminarCajon: async (id) => {
+        try {
+          await cajonesService.delete(id);
+          await get().fetchCajones();
+        } catch (e) { console.error('Error deleting cajon:', e); throw e; }
+      },
+
+      // ────────────── CRUD Matriculas ──────────────
+      agregarMatricula: async (data) => {
+        try {
+          await matriculasService.create(data);
+          await get().fetchMatriculas();
+        } catch (e) { console.error('Error creating matricula:', e); throw e; }
+      },
+
+      actualizarMatricula: async (id, data) => {
+        try {
+          await matriculasService.update(id, data);
+          await get().fetchMatriculas();
+        } catch (e) { console.error('Error updating matricula:', e); throw e; }
+      },
+
+      eliminarMatricula: async (id) => {
+        try {
+          await matriculasService.delete(id);
+          await get().fetchMatriculas();
+        } catch (e) { console.error('Error deleting matricula:', e); throw e; }
+      },
+
+      // ────────────── CRUD Edificios ──────────────
+      agregarEdificio: async (data) => {
+        try {
+          const res = await edificiosService.create(data);
+          await get().fetchEdificios();
+          return res.data;
+        } catch (e) { console.error('Error creating edificio:', e); throw e; }
+      },
+
+      actualizarEdificio: async (id, data) => {
+        try {
+          await edificiosService.update(id, data);
+          await get().fetchEdificios();
+        } catch (e) { console.error('Error updating edificio:', e); throw e; }
+      },
+
+      eliminarEdificio: async (id) => {
+        try {
+          await edificiosService.delete(id);
+          await get().fetchEdificios();
+        } catch (e) { console.error('Error deleting edificio:', e); throw e; }
+      },
+
+      // ────────────── CRUD Departamentos ──────────────
+      agregarDepartamento: async (data) => {
+        try {
+          const res = await departamentosService.create(data);
+          await get().fetchDepartamentos();
+          return res.data;
+        } catch (e) { console.error('Error creating departamento:', e); throw e; }
+      },
+
+      actualizarDepartamento: async (id, data) => {
+        try {
+          await departamentosService.update(id, data);
+          await get().fetchDepartamentos();
+        } catch (e) { console.error('Error updating departamento:', e); throw e; }
+      },
+
+      eliminarDepartamento: async (id) => {
+        try {
+          await departamentosService.delete(id);
+          await get().fetchDepartamentos();
+        } catch (e) { console.error('Error deleting departamento:', e); throw e; }
+      },
+
+      // ────────────── CRUD Users (Admin) ──────────────
+      agregarUsuario: async (data) => {
+        try {
+          const res = await authService.register(data);
+          await get().fetchUsuarios();
+          return res.data;
+        } catch (e) { console.error('Error creating usuario:', e); throw e; }
+      },
+
+      actualizarUsuario: async (id, data) => {
+        try {
+          await usersService.update(id, data);
+          await get().fetchUsuarios();
+        } catch (e) { console.error('Error updating usuario:', e); throw e; }
+      },
+
+      eliminarUsuario: async (id) => {
+        try {
+          await usersService.delete(id);
+          await get().fetchUsuarios();
+        } catch (e) { console.error('Error deleting usuario:', e); throw e; }
+      },
+
+      bloquearUsuario: async (id) => {
+        try {
+          await usersService.bloquear(id);
+          await get().fetchUsuarios();
+        } catch (e) { console.error('Error bloqueando usuario:', e); throw e; }
+      },
+
+      desbloquearUsuario: async (id) => {
+        try {
+          await usersService.desbloquear(id);
+          await get().fetchUsuarios();
+        } catch (e) { console.error('Error desbloqueando usuario:', e); throw e; }
+      },
+
+      // ────────────── Helpers ──────────────
+      buscarPorMatricula: (matricula: string) => {
+        return get().matriculas.find(
+          (m) => m.matricula?.toUpperCase() === matricula.toUpperCase()
+        );
       },
     }),
     {
-      name: 'condominio-storage',
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          deserializeDates(state);
-        }
-      },
+      name: 'condominio-session',
+      partialize: (state) => ({
+        session: state.session,
+        isSidebarOpen: state.isSidebarOpen,
+      }),
     }
   )
 );

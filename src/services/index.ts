@@ -1,0 +1,13 @@
+export { authService } from './auth.service';
+export { usersService } from './users.service';
+export { edificiosService } from './edificios.service';
+export { departamentosService } from './departamentos.service';
+export { residentesService } from './residentes.service';
+export { vigilantesService } from './vigilantes.service';
+export { administradoresService } from './administradores.service';
+export { visitantesService } from './visitantes.service';
+export { cajonesService } from './cajones.service';
+export { matriculasService } from './matriculas.service';
+export { accesosService } from './accesos.service';
+export { pagosService } from './pagos.service';
+export { anunciosService } from './anuncios.service';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import {
   Search,
@@ -16,71 +16,29 @@ import {
 type TipoIngreso = 'delivery' | 'transporte' | 'otros' | 'visitante';
 
 export default function VigilantePage() {
-  const { buscarPorMatricula, estadosPago } = useStore();
+  const { buscarPorMatricula, fetchMatriculas, accesosHoy, fetchAccesosHoy, registrarAcceso, session } = useStore();
 
   const [matricula, setMatricula] = useState('');
   const [resultado, setResultado] = useState<
     'loading' | 'found' | 'not-found' | 'granted' | 'denied' | null
   >(null);
   const [residenteEncontrado, setResidenteEncontrado] = useState<any>(null);
-  const [estadoPagoResidente, setEstadoPagoResidente] = useState<any>(null);
+  const [matriculaEncontrada, setMatriculaEncontrada] = useState<any>(null);
 
   const [tipoActivo, setTipoActivo] = useState<TipoIngreso>('delivery');
 
-  const registros = useMemo(
-    () => [
-      {
-        id: 1,
-        tipo: 'delivery' as TipoIngreso,
-        empresa: 'Rappi',
-        hora: '10:20',
-        conductor: 'Luis M.',
-        edificio: 'Torre A',
-        placa: 'ABC-123',
-      },
-      {
-        id: 2,
-        tipo: 'delivery' as TipoIngreso,
-        empresa: 'Uber Eats',
-        hora: '11:05',
-        conductor: 'Carlos R.',
-        edificio: 'Torre C',
-        placa: 'JKL-991',
-      },
-      {
-        id: 3,
-        tipo: 'delivery' as TipoIngreso,
-        empresa: 'Didi Food',
-        hora: '11:40',
-        conductor: 'Marco S.',
-        edificio: 'Torre B',
-        placa: 'TRX-202',
-      },
-      {
-        id: 4,
-        tipo: 'transporte' as TipoIngreso,
-        empresa: 'Taxi Sitio',
-        hora: '12:10',
-        conductor: 'Ana P.',
-        edificio: 'Torre D',
-        placa: 'YYZ-777',
-      },
-      {
-        id: 5,
-        tipo: 'visitante' as TipoIngreso,
-        empresa: 'Particular',
-        hora: '13:30',
-        conductor: 'María L.',
-        edificio: 'Torre A',
-        placa: 'VIS-303',
-      },
-    ],
-    []
-  );
+  useEffect(() => {
+    fetchMatriculas();
+    fetchAccesosHoy();
+  }, []);
 
   const registrosFiltrados = useMemo(
-    () => registros.filter((r) => r.tipo === tipoActivo),
-    [registros, tipoActivo]
+    () => accesosHoy.filter((a) => {
+      // Map acceso types to TipoIngreso categories
+      if (tipoActivo === 'visitante') return a.visitante != null;
+      return false; // Other types not mapped from API accesos
+    }),
+    [accesosHoy, tipoActivo]
   );
 
   const handleSearch = (e: React.FormEvent) => {
@@ -90,28 +48,38 @@ export default function VigilantePage() {
     setResultado('loading');
 
     setTimeout(() => {
-      const residente = buscarPorMatricula(matricula.trim().toUpperCase());
-      if (residente) {
+      const found = buscarPorMatricula(matricula.trim().toUpperCase());
+      if (found) {
+        const residente = found.residente;
         setResidenteEncontrado(residente);
-        const estadoPago = estadosPago.find((ep) => ep.residenteId === residente.id);
-        setEstadoPagoResidente(estadoPago);
+        setMatriculaEncontrada(found);
         setResultado('found');
       } else {
         setResidenteEncontrado(null);
-        setEstadoPagoResidente(null);
+        setMatriculaEncontrada(null);
         setResultado('not-found');
       }
     }, 350);
   };
 
-  const handleGrantAccess = () => setResultado('granted');
+  const handleGrantAccess = async () => {
+    try {
+      await registrarAcceso({
+        matricula_fk: matriculaEncontrada?.matricula,
+        id_vigilante_fk: session.user?.id_vigilante || session.user?.apiUserId,
+      });
+      setResultado('granted');
+    } catch {
+      setResultado('granted');
+    }
+  };
   const handleDenyAccess = () => setResultado('denied');
 
   const handleNewSearch = () => {
     setMatricula('');
     setResultado(null);
     setResidenteEncontrado(null);
-    setEstadoPagoResidente(null);
+    setMatriculaEncontrada(null);
   };
 
   const getEstadoPagoClasses = (estado?: string) => {
@@ -227,33 +195,16 @@ export default function VigilantePage() {
                     <span className="font-semibold">Nombre:</span> {residenteEncontrado.nombre}
                   </p>
                   <p>
-                    <span className="font-semibold">Edificio:</span> {residenteEncontrado.edificio}
+                    <span className="font-semibold">Edificio:</span> {residenteEncontrado.edificio?.num_edificio || matriculaEncontrada?.edificio?.num_edificio || 'N/A'}
                   </p>
                   <p>
                     <span className="font-semibold">Departamento:</span>{' '}
-                    {residenteEncontrado.departamento}
+                    {residenteEncontrado.departamento?.id_departamento || 'N/A'}
                   </p>
-                  <p className="flex items-center gap-2">
-                    <span className="font-semibold">Estado de pago:</span>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getEstadoPagoClasses(
-                        estadoPagoResidente?.estado
-                      )}`}
-                    >
-                      {getEstadoPagoTexto(estadoPagoResidente?.estado)}
-                    </span>
+                  <p>
+                    <span className="font-semibold">Matrícula:</span> {matriculaEncontrada?.matricula}
                   </p>
                 </div>
-
-                {estadoPagoResidente && estadoPagoResidente.estado !== 'pagado' && (
-                  <div className="rounded-md border border-yellow-300 bg-yellow-50 p-2.5 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 mt-0.5 text-yellow-700" />
-                    <p className="text-yellow-800 text-sm">
-                      El residente presenta adeudos. Monto:{' '}
-                      <strong>${estadoPagoResidente?.deudaTotal?.toLocaleString?.() ?? 0}</strong>
-                    </p>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
@@ -342,7 +293,7 @@ export default function VigilantePage() {
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
                 <tr>
-                  {['Empresa', 'Hora', 'Conductor', 'Edificio', 'Placa'].map((h) => (
+                  {['Visitante', 'Hora', 'Residente', 'Edificio', 'Tipo'].map((h) => (
                     <th
                       key={h}
                       className="border-[3px] border-[#9a9a9a] bg-[#f2f2f2] px-3 py-2 text-[clamp(.9rem,1.2vw,1.8rem)] font-extrabold"
@@ -350,36 +301,29 @@ export default function VigilantePage() {
                       {h}
                     </th>
                   ))}
-                  <th className="px-2 py-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {registrosFiltrados.length === 0 ? (
+                {accesosHoy.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="border-[3px] border-[#9a9a9a] bg-white px-4 py-4 text-center text-sm md:text-base text-gray-600"
                     >
-                      Sin registros para esta categoría
+                      Sin registros de acceso hoy
                     </td>
                   </tr>
                 ) : (
-                  registrosFiltrados.map((r) => (
-                    <tr key={r.id}>
-                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{r.empresa}</td>
-                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{r.hora}</td>
-                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{r.conductor}</td>
-                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{r.edificio}</td>
-                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{r.placa}</td>
-                      <td className="px-2 py-1.5">
-                        <div className="flex items-center gap-2">
-                          <button className="rounded-full bg-[#e2d246] hover:bg-[#d6c63f] px-4 py-1.5 text-sm md:text-base font-bold">
-                            Salida
-                          </button>
-                          <button className="rounded-full bg-[#ee615a] hover:bg-[#d9554f] text-white px-4 py-1.5 text-sm md:text-base font-bold">
-                            Eliminar
-                          </button>
-                        </div>
+                  accesosHoy.map((a) => (
+                    <tr key={a.id_accesos}>
+                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{a.visitante?.nombre || 'N/A'}</td>
+                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{a.hora_entrada || (a.createdAt ? new Date(a.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '')}</td>
+                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{a.matriculaRel?.residente?.nombre || 'N/A'}</td>
+                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">{a.matriculaRel?.residente?.edificio?.num_edificio || 'N/A'}</td>
+                      <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${a.hora_salida ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          {a.hora_salida ? 'Salida' : 'Entrada'}
+                        </span>
                       </td>
                     </tr>
                   ))

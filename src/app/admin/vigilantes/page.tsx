@@ -1,88 +1,98 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Search, Plus, Edit2, Trash2, X, Filter, Menu, LogOut } from 'lucide-react';
-import { User, TurnoVigilante } from '@/types';
+import { ApiVigilante } from '@/types';
 import { formatearFecha } from '@/lib/utils';
 
 export default function VigilantesPage() {
-  const { usuarios, agregarUsuario, actualizarUsuario, eliminarUsuario } = useStore();
+  const {
+    vigilantes,
+    fetchVigilantes,
+    agregarVigilante, actualizarVigilante, eliminarVigilante,
+    agregarUsuario,
+  } = useStore();
 
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingVigilante, setEditingVigilante] = useState<ApiVigilante | null>(null);
 
   const [formData, setFormData] = useState({
     nombre: '',
+    apellido: '',
     email: '',
     password: '',
     telefono: '',
-    turno: 'matutino' as TurnoVigilante,
-    activo: true,
   });
 
-  const vigilantes = useMemo(
-    () => usuarios.filter((u) => u.rol === 'vigilante'),
-    [usuarios]
-  );
+  useEffect(() => {
+    const loadData = async () => {
+      try { await fetchVigilantes(); }
+      catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    loadData();
+  }, []);
 
   const filteredVigilantes = useMemo(() => {
     return vigilantes.filter(
       (v) =>
-        v.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.telefono || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (v.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.usuario?.correo || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [vigilantes, searchTerm]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingUser) {
-      actualizarUsuario(editingUser.id, {
-        nombre: formData.nombre,
-        email: formData.email,
-        telefono: formData.telefono,
-        turno: formData.turno,
-        activo: formData.activo,
-      });
-    } else {
-      agregarUsuario({
-        nombre: formData.nombre,
-        email: formData.email,
-        telefono: formData.telefono,
-        turno: formData.turno,
-        rol: 'vigilante',
-        activo: formData.activo,
-        password: formData.password || 'vigilante123',
-      });
+    try {
+      if (editingVigilante) {
+        await actualizarVigilante(editingVigilante.id_vigilante, {
+          nombre: `${formData.nombre} ${formData.apellido}`.trim(),
+          telefono: formData.telefono || undefined,
+        });
+      } else {
+        // 1) Create user account
+        const newUser = await agregarUsuario({
+          correo: formData.email,
+          password: formData.password || 'vigilante123',
+          rol: 'VIGILANTE',
+        });
+        // 2) Create vigilante profile linked to the new user
+        await agregarVigilante({
+          nombre: `${formData.nombre} ${formData.apellido}`.trim(),
+          telefono: formData.telefono || undefined,
+          id_usuario_fk: newUser?.usuario?.id_usuario || newUser?.id_usuario || newUser?.id,
+        });
+      }
+      closeModal();
+    } catch (err: any) {
+      console.error('Error guardando vigilante:', err);
     }
-
-    closeModal();
   };
 
-  const openModal = (user?: User) => {
-    if (user) {
-      setEditingUser(user);
+  const openModal = (vigilante?: ApiVigilante) => {
+    if (vigilante) {
+      setEditingVigilante(vigilante);
+      const nameParts = (vigilante.nombre || '').split(' ');
       setFormData({
-        nombre: user.nombre,
-        email: user.email,
+        nombre: nameParts[0] || '',
+        apellido: nameParts.slice(1).join(' ') || '',
+        email: vigilante.usuario?.correo || '',
         password: '',
-        telefono: user.telefono || '',
-        turno: (user.turno as TurnoVigilante) || 'matutino',
-        activo: !!user.activo,
+        telefono: vigilante.telefono || '',
       });
     } else {
-      setEditingUser(null);
+      setEditingVigilante(null);
       setFormData({
         nombre: '',
+        apellido: '',
         email: '',
         password: '',
         telefono: '',
-        turno: 'matutino',
-        activo: true,
       });
     }
     setShowModal(true);
@@ -90,23 +100,23 @@ export default function VigilantesPage() {
 
   const closeModal = () => {
     setShowModal(false);
-    setEditingUser(null);
+    setEditingVigilante(null);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('¿Seguro que deseas eliminar este vigilante?')) {
-      eliminarUsuario(id);
+      try { await eliminarVigilante(id); }
+      catch (err) { console.error('Error eliminando vigilante:', err); }
     }
   };
 
-  const getTurnoLabel = (turno: string) => {
-    const turnos: Record<TurnoVigilante, string> = {
-      matutino: 'Matutino',
-      vespertino: 'Vespertino',
-      nocturno: 'Nocturno',
-    };
-    return turnos[(turno as TurnoVigilante) || 'matutino'];
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-lg text-gray-500">Cargando vigilantes...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#ececed] px-4 sm:px-6 py-6">
@@ -208,35 +218,33 @@ export default function VigilantesPage() {
                   </tr>
                 ) : (
                   filteredVigilantes.map((vigilante) => (
-                    <tr key={vigilante.id} className="bg-[#efeff0]">
+                    <tr key={vigilante.id_vigilante} className="bg-[#efeff0]">
                       <td className="px-8 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
                         {vigilante.nombre}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {vigilante.telefono}
+                        {vigilante.telefono || '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {vigilante.email}
+                        {vigilante.usuario?.correo || '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {formatearFecha(vigilante.createdAt)}
+                        {vigilante.createdAt ? formatearFecha(vigilante.createdAt) : '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {getTurnoLabel(vigilante.turno || 'matutino')}
+                        -
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
                         <span
-                          className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[17px] font-semibold text-white ${
-                            vigilante.activo ? 'bg-[#8BC46A]' : 'bg-[#ff5757]'
-                          }`}
+                          className="inline-flex items-center rounded-2xl px-4 py-1.5 text-[17px] font-semibold text-white bg-[#8BC46A]"
                         >
-                          {vigilante.activo ? 'Activo' : 'Inactivo'}
+                          Activo
                         </span>
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => handleDelete(vigilante.id)}
+                            onClick={() => handleDelete(vigilante.id_vigilante)}
                             className="p-2 rounded-lg text-[#ff5757] hover:bg-[#ffeaea] transition"
                             title="Eliminar"
                           >
@@ -276,7 +284,7 @@ export default function VigilantesPage() {
           <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 p-5">
               <h2 className="text-xl font-bold text-slate-800">
-                {editingUser ? 'Editar Vigilante' : 'Nuevo Vigilante'}
+                {editingVigilante ? 'Editar Vigilante' : 'Nuevo Vigilante'}
               </h2>
               <button
                 onClick={closeModal}
@@ -297,6 +305,15 @@ export default function VigilantesPage() {
               />
 
               <input
+                type="text"
+                value={formData.apellido}
+                onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                placeholder="Apellido"
+                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+                required
+              />
+
+              <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -311,29 +328,9 @@ export default function VigilantesPage() {
                 onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                 placeholder="Teléfono"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-                required
               />
 
-              <select
-                value={formData.turno}
-                onChange={(e) => setFormData({ ...formData, turno: e.target.value as TurnoVigilante })}
-                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-              >
-                <option value="matutino">Matutino</option>
-                <option value="vespertino">Vespertino</option>
-                <option value="nocturno">Nocturno</option>
-              </select>
-
-              <select
-                value={formData.activo ? 'activo' : 'inactivo'}
-                onChange={(e) => setFormData({ ...formData, activo: e.target.value === 'activo' })}
-                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-              >
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-              </select>
-
-              {!editingUser && (
+              {!editingVigilante && (
                 <input
                   type="password"
                   value={formData.password}

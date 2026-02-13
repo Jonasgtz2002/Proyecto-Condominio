@@ -1,135 +1,100 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { Search, Plus, Edit2, Trash2, X, Filter, Menu, LogOut } from 'lucide-react';
-import { User, TurnoVigilante } from '@/types';
+import { Search, Plus, X, UserX } from 'lucide-react';
+import { ApiVisitante } from '@/types';
 import { formatearFecha } from '@/lib/utils';
 
-export default function VigilantesPage() {
-  const { usuarios, agregarUsuario, actualizarUsuario, eliminarUsuario } = useStore();
+export default function VisitantesActivosPage() {
+  const {
+    visitantesActivos,
+    fetchVisitantesActivos,
+    registrarSalidaVisitante,
+    agregarVisitante,
+    residentes,
+    fetchResidentes,
+  } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-
   const [formData, setFormData] = useState({
     nombre: '',
-    email: '',
-    password: '',
-    telefono: '',
-    turno: 'matutino' as TurnoVigilante,
-    activo: true,
+    empresa: '',
+    categoria: '',
+    id_edificio_fk: '',
   });
 
-  const vigilantes = useMemo(
-    () => usuarios.filter((u) => u.rol === 'vigilante'),
-    [usuarios]
-  );
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await Promise.all([fetchVisitantesActivos(), fetchResidentes()]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
-  const filteredVigilantes = useMemo(() => {
-    return vigilantes.filter(
+  const filteredVisitantes = useMemo(() => {
+    return visitantesActivos.filter(
       (v) =>
-        v.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.telefono || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (v.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.empresa || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [vigilantes, searchTerm]);
+  }, [visitantesActivos, searchTerm]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (editingUser) {
-      actualizarUsuario(editingUser.id, {
+    try {
+      await agregarVisitante({
         nombre: formData.nombre,
-        email: formData.email,
-        telefono: formData.telefono,
-        turno: formData.turno,
-        activo: formData.activo,
+        empresa: formData.empresa || undefined,
+        categoria: formData.categoria || undefined,
+        id_edificio_fk: Number(formData.id_edificio_fk) || undefined,
+        activo: 'S',
       });
-    } else {
-      agregarUsuario({
-        nombre: formData.nombre,
-        email: formData.email,
-        telefono: formData.telefono,
-        turno: formData.turno,
-        rol: 'vigilante',
-        activo: formData.activo,
-        password: formData.password || 'vigilante123',
-      });
+      await fetchVisitantesActivos();
+      closeModal();
+    } catch (error) {
+      console.error('Error al registrar visitante:', error);
     }
-
-    closeModal();
   };
 
-  const openModal = (user?: User) => {
-    if (user) {
-      setEditingUser(user);
-      setFormData({
-        nombre: user.nombre,
-        email: user.email,
-        password: '',
-        telefono: user.telefono || '',
-        turno: (user.turno as TurnoVigilante) || 'matutino',
-        activo: !!user.activo,
-      });
-    } else {
-      setEditingUser(null);
-      setFormData({
-        nombre: '',
-        email: '',
-        password: '',
-        telefono: '',
-        turno: 'matutino',
-        activo: true,
-      });
+  const handleSalida = async (id: number) => {
+    try {
+      await registrarSalidaVisitante(id);
+    } catch (error) {
+      console.error('Error al registrar salida:', error);
     }
+  };
+
+  const openModal = () => {
+    setFormData({ nombre: '', empresa: '', categoria: '', id_edificio_fk: '' });
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setEditingUser(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('¿Seguro que deseas eliminar este vigilante?')) {
-      eliminarUsuario(id);
-    }
-  };
-
-  const getTurnoLabel = (turno: string) => {
-    const turnos: Record<TurnoVigilante, string> = {
-      matutino: 'Matutino',
-      vespertino: 'Vespertino',
-      nocturno: 'Nocturno',
-    };
-    return turnos[(turno as TurnoVigilante) || 'matutino'];
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#ececed] flex items-center justify-center">
+        <p className="text-xl text-slate-600">Cargando visitantes...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#ececed] px-4 sm:px-6 py-6">
-      {/* ancho controlado para evitar “efecto zoom” */}
       <div className="mx-auto w-full max-w-[1440px]">
-        {/* Top-right */}
-        <div className="mb-4 flex justify-end">
-          <button
-            type="button"
-            className="rounded-2xl border border-red-400 bg-white px-6 py-3 text-[18px] font-semibold text-[#1e1e1e] hover:bg-red-50 transition"
-          >
-            <span className="inline-flex items-center gap-2">
-              <LogOut className="h-5 w-5 text-red-500" />
-              Cerrar sesión
-            </span>
-          </button>
-        </div>
-
         {/* Título */}
         <div className="mb-6">
-          <h1 className="text-[56px] leading-none font-extrabold text-black">Vigilantes</h1>
+          <h1 className="text-[56px] leading-none font-extrabold text-black">Visitantes Activos</h1>
           <p className="mt-3 text-[44px] sm:text-[30px] md:text-[44px] lg:text-[44px] font-semibold text-slate-700">
-            Información sobre los vigilantes
+            Visitantes actualmente dentro del condominio
           </p>
         </div>
 
@@ -142,114 +107,61 @@ export default function VigilantesPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar"
+                placeholder="Buscar visitante"
                 className="h-[56px] w-full rounded-2xl border-[4px] border-black bg-[#f7f7f7] pl-14 pr-4 text-[38px] sm:text-[22px] md:text-[20px] text-[#1e1e1e] placeholder:text-[#1e1e1e] outline-none focus:border-[#5d6bc7]"
               />
             </div>
-
-            <button
-              type="button"
-              className="h-[56px] w-[58px] rounded-2xl bg-[#5d6bc7] text-white inline-flex items-center justify-center hover:brightness-110 transition"
-            >
-              <Search className="h-8 w-8" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowFilters((v) => !v)}
-              className="h-[56px] rounded-2xl bg-[#5d6bc7] text-white px-5 inline-flex items-center gap-2 text-[38px] sm:text-[22px] md:text-[20px] font-medium hover:brightness-110 transition"
-            >
-              <Menu className="h-7 w-7" />
-              Filtrar
-            </button>
           </div>
 
           <button
-            onClick={() => openModal()}
+            onClick={openModal}
             className="h-[56px] rounded-2xl bg-[#5d6bc7] px-6 text-white inline-flex items-center gap-2 text-[38px] sm:text-[22px] md:text-[20px] font-medium hover:brightness-110 transition"
           >
             <Plus className="h-7 w-7" />
-            Nuevo Residente
+            Registrar Visitante
           </button>
         </div>
-
-        {/* Filtros opcionales */}
-        {showFilters && (
-          <div className="mb-4 rounded-xl border border-[#cdd3ff] bg-white p-3">
-            <div className="text-sm text-slate-600 flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Puedes agregar aquí más filtros (turno / estado) si quieres.
-            </div>
-          </div>
-        )}
 
         {/* Tabla */}
         <div className="rounded-2xl border border-[#777] bg-white/40 overflow-hidden">
           <div className="max-h-[520px] overflow-auto">
-            <table className="w-full min-w-[1120px] border-separate border-spacing-0">
+            <table className="w-full min-w-[900px] border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5d6bc7] text-white">
                   <th className="px-8 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Nombre</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Teléfono</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Email</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Fecha de alta</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Turno</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Estado</th>
+                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Empresa</th>
+                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Hora Entrada</th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Acciones</th>
                 </tr>
               </thead>
 
               <tbody>
-                {filteredVigilantes.length === 0 ? (
+                {filteredVisitantes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-slate-600 text-lg border-t border-[#8f8f8f]">
-                      No hay vigilantes para mostrar.
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-600 text-lg border-t border-[#8f8f8f]">
+                      No hay visitantes activos.
                     </td>
                   </tr>
                 ) : (
-                  filteredVigilantes.map((vigilante) => (
-                    <tr key={vigilante.id} className="bg-[#efeff0]">
+                  filteredVisitantes.map((visitante) => (
+                    <tr key={visitante.id_visitante} className="bg-[#efeff0]">
                       <td className="px-8 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {vigilante.nombre}
+                        {visitante.nombre}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {vigilante.telefono}
+                        {visitante.empresa || '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {vigilante.email}
-                      </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {formatearFecha(vigilante.createdAt)}
-                      </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {getTurnoLabel(vigilante.turno || 'matutino')}
+                        {visitante.createdAt ? formatearFecha(visitante.createdAt) : 'N/A'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
-                        <span
-                          className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[17px] font-semibold text-white ${
-                            vigilante.activo ? 'bg-[#8BC46A]' : 'bg-[#ff5757]'
-                          }`}
+                        <button
+                          onClick={() => handleSalida(visitante.id_visitante)}
+                          className="rounded-2xl bg-red-500 px-5 py-2 text-white text-[18px] font-medium hover:bg-red-600 transition inline-flex items-center gap-2"
                         >
-                          {vigilante.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f]">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleDelete(vigilante.id)}
-                            className="p-2 rounded-lg text-[#ff5757] hover:bg-[#ffeaea] transition"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-8 w-8" />
-                          </button>
-                          <button
-                            onClick={() => openModal(vigilante)}
-                            className="rounded-2xl bg-[#5d6bc7] px-5 py-2 text-white text-[18px] font-medium hover:brightness-110 transition inline-flex items-center gap-2"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                            Editar
-                          </button>
-                        </div>
+                          <UserX className="h-4 w-4" />
+                          Registrar Salida
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -258,16 +170,6 @@ export default function VigilantesPage() {
             </table>
           </div>
         </div>
-
-        {/* FAB */}
-        <button
-          type="button"
-          onClick={() => openModal()}
-          className="fixed bottom-8 right-8 h-[102px] w-[102px] rounded-full bg-[#5d6bc7] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
-          title="Nuevo"
-        >
-          <Plus className="h-14 w-14" />
-        </button>
       </div>
 
       {/* Modal */}
@@ -275,9 +177,7 @@ export default function VigilantesPage() {
         <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 p-5">
-              <h2 className="text-xl font-bold text-slate-800">
-                {editingUser ? 'Editar Vigilante' : 'Nuevo Vigilante'}
-              </h2>
+              <h2 className="text-xl font-bold text-slate-800">Registrar Visitante</h2>
               <button
                 onClick={closeModal}
                 className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
@@ -297,62 +197,35 @@ export default function VigilantesPage() {
               />
 
               <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Email"
+                type="text"
+                value={formData.empresa}
+                onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
+                placeholder="Empresa (opcional)"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-                required
-              />
-
-              <input
-                type="tel"
-                value={formData.telefono}
-                onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                placeholder="Teléfono"
-                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-                required
               />
 
               <select
-                value={formData.turno}
-                onChange={(e) => setFormData({ ...formData, turno: e.target.value as TurnoVigilante })}
+                value={formData.categoria}
+                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
               >
-                <option value="matutino">Matutino</option>
-                <option value="vespertino">Vespertino</option>
-                <option value="nocturno">Nocturno</option>
+                <option value="">Categoría (opcional)</option>
+                <option value="delivery">Delivery</option>
+                <option value="transporte">Transporte</option>
+                <option value="visitante">Visitante</option>
+                <option value="otros">Otros</option>
               </select>
-
-              <select
-                value={formData.activo ? 'activo' : 'inactivo'}
-                onChange={(e) => setFormData({ ...formData, activo: e.target.value === 'activo' })}
-                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-              >
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-              </select>
-
-              {!editingUser && (
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Contraseña (opcional)"
-                  className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
-                />
-              )}
 
               <button
                 type="submit"
                 className="w-full h-11 rounded-lg bg-[#5d6bc7] text-white font-semibold hover:brightness-110 transition"
               >
-                Guardar
+                Registrar
               </button>
             </form>
           </div>
         </div>
       )}
-    </div> 
+    </div>
   );
 }

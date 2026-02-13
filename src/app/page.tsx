@@ -8,8 +8,27 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login, usuarios } = useStore();
+  const { login, session, fetchMe } = useStore();
+
+  // Restore session from token on reload → redirect if already authenticated
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    if (token && !session.isAuthenticated) {
+      fetchMe();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session.isAuthenticated && session.user?.rol) {
+      switch (session.user.rol) {
+        case 'admin': router.push('/admin'); break;
+        case 'vigilante': router.push('/vigilante'); break;
+        case 'residente': router.push('/residente'); break;
+      }
+    }
+  }, [session.isAuthenticated, session.user?.rol]);
 
   const handleResetStorage = () => {
     if (confirm('¿Deseas resetear los datos? Esto limpiará el localStorage y recargará la página.')) {
@@ -18,32 +37,33 @@ export default function LoginPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    console.log('Intentando login con:', email);
-    console.log('Usuarios disponibles:', usuarios.length);
-    console.log('Usuarios:', usuarios.map(u => ({ email: u.email, password: u.password, activo: u.activo })));
+    try {
+      const user = await login(email, password);
 
-    const user = login(email, password);
-    console.log('Usuario encontrado:', user);
-
-    if (user) {
-      // Redirigir según el rol
-      switch (user.rol) {
-        case 'admin':
-          router.push('/admin');
-          break;
-        case 'vigilante':
-          router.push('/vigilante');
-          break;
-        case 'residente':
-          router.push('/residente');
-          break;
+      if (user) {
+        switch (user.rol) {
+          case 'admin':
+            router.push('/admin');
+            break;
+          case 'vigilante':
+            router.push('/vigilante');
+            break;
+          case 'residente':
+            router.push('/residente');
+            break;
+        }
+      } else {
+        setError('USUARIO O CONTRASEÑA INCORRECTOS');
       }
-    } else {
-      setError('USUARIO O CONTRASEÑA INCORRECTOS');
+    } catch {
+      setError('Error de conexión con el servidor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,9 +112,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded-2xl transition-all text-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              disabled={loading}
+              className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded-2xl transition-all text-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
-              Iniciar sesión
+              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
 
             <div className="text-center">

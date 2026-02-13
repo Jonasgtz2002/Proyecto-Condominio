@@ -1,16 +1,31 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Users, Shield, DollarSign, Home } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { usuarios, estadosPago, registros, obtenerVisitantesActivos } = useStore();
-  
-  const visitantesActivos = obtenerVisitantesActivos();
-  const totalResidentes = usuarios.filter((u) => u.rol === 'residente' && u.activo).length;
-  const totalVigilantes = usuarios.filter((u) => u.rol === 'vigilante' && u.activo).length;
-  
-  const pagosVencidos = estadosPago.filter(e => e.estado === 'vencido' || e.estado === 'adeudo').length;
+  const {
+    residentes, vigilantes, visitantesActivos, accesos, pagosVencidos,
+    fetchResidentes, fetchVigilantes, fetchVisitantesActivos, fetchAccesos, fetchPagosVencidos,
+  } = useStore();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchResidentes(),
+          fetchVigilantes(),
+          fetchVisitantesActivos(),
+          fetchAccesos(),
+          fetchPagosVencidos(),
+        ]);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    loadData();
+  }, []);
 
   const stats = [
     {
@@ -21,23 +36,31 @@ export default function AdminDashboard() {
     },
     {
       title: 'Total Residentes',
-      value: totalResidentes,
+      value: residentes.length,
       icon: <Users className="w-8 h-8" />,
       bgColor: 'from-green-500 to-green-600',
     },
     {
       title: 'Vigilantes Activos',
-      value: totalVigilantes,
+      value: vigilantes.length,
       icon: <Shield className="w-8 h-8" />,
       bgColor: 'from-purple-500 to-purple-600',
     },
     {
-      title: 'Pagos Pendientes',
-      value: pagosVencidos,
+      title: 'Pagos Vencidos',
+      value: pagosVencidos.length,
       icon: <DollarSign className="w-8 h-8" />,
       bgColor: 'from-orange-500 to-orange-600',
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-lg text-gray-500">Cargando datos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,31 +89,40 @@ export default function AdminDashboard() {
       <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
         <h2 className="text-2xl font-bold text-white mb-4">Actividad Reciente</h2>
         <div className="space-y-3">
-          {registros.slice(-5).reverse().map((registro) => (
+          {accesos.slice(-5).reverse().map((acceso) => (
             <div
-              key={registro.id}
+              key={acceso.id_accesos}
               className="bg-white/5 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-colors"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white font-medium">{registro.visitante}</p>
-                  <p className="text-slate-400 text-sm">{registro.residenteNombre}</p>
+                  <p className="text-white font-medium">
+                    {acceso.visitante
+                      ? acceso.visitante.nombre
+                      : (acceso.matricula_fk || 'Desconocido')}
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    Matrícula: {acceso.matricula_fk || ''}
+                  </p>
                 </div>
                 <div className="text-right">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                    registro.tipo === 'entrada'
+                    !acceso.hora_salida
                       ? 'bg-green-500/20 text-green-300 border border-green-500/50'
                       : 'bg-red-500/20 text-red-300 border border-red-500/50'
                   }`}>
-                    {registro.tipo === 'entrada' ? 'Entrada' : 'Salida'}
+                    {!acceso.hora_salida ? 'Entrada' : 'Salida'}
                   </span>
                   <p className="text-slate-400 text-sm mt-1">
-                    {new Date(registro.timestamp).toLocaleString('es-MX')}
+                    {acceso.hora_entrada || (acceso.createdAt ? new Date(acceso.createdAt).toLocaleString('es-MX') : '')}
                   </p>
                 </div>
               </div>
             </div>
           ))}
+          {accesos.length === 0 && (
+            <p className="text-slate-400 text-center py-4">No hay actividad reciente</p>
+          )}
         </div>
       </div>
     </div>

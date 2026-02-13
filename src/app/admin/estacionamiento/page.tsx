@@ -1,47 +1,46 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-
-interface EspacioEstacionamiento {
-  id: string;
-  codigo: string;
-  edificio: string;
-  numero: string;
-  ocupado: boolean;
-  residenteId?: string;
-  residenteNombre?: string;
-}
-
-const generarEspacios = (): EspacioEstacionamiento[] => {
-  const espacios: EspacioEstacionamiento[] = [];
-
-  ['E1', 'E2', 'E3'].forEach((edificio) => {
-    for (let i = 1; i <= 18; i++) {
-      const numero = i.toString().padStart(2, '0');
-      espacios.push({
-        id: `${edificio}-${numero}`,
-        codigo: `${edificio} ${numero}`,
-        edificio,
-        numero,
-        ocupado: Math.random() > 0.5,
-      });
-    }
-  });
-
-  return espacios;
-};
+import { useEffect, useMemo, useState } from 'react';
+import { useStore } from '@/store/useStore';
 
 export default function EstacionamientoPage() {
-  const [espacios] = useState<EspacioEstacionamiento[]>(generarEspacios());
+  const { cajones, fetchCajones } = useStore();
+  const [loading, setLoading] = useState(true);
 
-  // En la captura solo se ve un edificio (E1) con 18 lugares (9 + 9)
-  const espaciosE1 = useMemo(
-    () => espacios.filter((e) => e.edificio === 'E1'),
-    [espacios]
-  );
+  useEffect(() => {
+    const loadData = async () => {
+      try { await fetchCajones(); }
+      catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    loadData();
+  }, []);
 
-  const izquierda = espaciosE1.slice(0, 9);
-  const derecha = espaciosE1.slice(9, 18);
+  // Group cajones by edificio
+  const edificios = useMemo(() => {
+    const map = new Map<string, typeof cajones>();
+    cajones.forEach((c) => {
+      const key = c.departamento?.edificio?.num_edificio || `Depto ${c.id_departamento_fk || 'Sin asignar'}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    });
+    return map;
+  }, [cajones]);
+
+  // Get first building cajones for display
+  const firstEdificio = Array.from(edificios.keys())[0];
+  const espaciosEdificio = firstEdificio ? edificios.get(firstEdificio) || [] : [];
+  const half = Math.ceil(espaciosEdificio.length / 2);
+  const izquierda = espaciosEdificio.slice(0, half);
+  const derecha = espaciosEdificio.slice(half);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-lg text-gray-500">Cargando estacionamiento...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white px-10 py-8">
@@ -68,40 +67,40 @@ export default function EstacionamientoPage() {
       {/* Grid centrado como la imagen */}
       <div className="mt-20 flex justify-center">
         <div className="flex gap-24">
-          {/* Bloque izquierdo (3x3) */}
+          {/* Bloque izquierdo */}
           <div className="grid grid-cols-3 gap-x-4 gap-y-6">
             {izquierda.map((espacio) => (
               <div
-                key={espacio.id}
+                key={espacio.id_cajon}
                 className={[
                   'flex h-44 w-40 items-center justify-center rounded-2xl',
                   'select-none font-extrabold tracking-wide',
                   'transition hover:opacity-90',
-                  espacio.ocupado
+                  espacio.estado === 'ocupado'
                     ? 'bg-[#E4645C] text-white'
                     : 'bg-[#9BC873] text-black',
                 ].join(' ')}
               >
-                <span className="text-4xl">{espacio.codigo}</span>
+                <span className="text-4xl">{espacio.id_cajon}</span>
               </div>
             ))}
           </div>
 
-          {/* Bloque derecho (3x3) */}
+          {/* Bloque derecho */}
           <div className="grid grid-cols-3 gap-x-4 gap-y-6">
             {derecha.map((espacio) => (
               <div
-                key={espacio.id}
+                key={espacio.id_cajon}
                 className={[
                   'flex h-44 w-40 items-center justify-center rounded-2xl',
                   'select-none font-extrabold tracking-wide',
                   'transition hover:opacity-90',
-                  espacio.ocupado
+                  espacio.estado === 'ocupado'
                     ? 'bg-[#E4645C] text-white'
                     : 'bg-[#9BC873] text-black',
                 ].join(' ')}
               >
-                <span className="text-4xl">{espacio.codigo}</span>
+                <span className="text-4xl">{espacio.id_cajon}</span>
               </div>
             ))}
           </div>

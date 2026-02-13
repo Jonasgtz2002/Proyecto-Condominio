@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { Sidebar } from '@/components/layouts/Sidebar';
@@ -10,17 +10,35 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session, logout, isSidebarOpen } = useStore();
+  const { session, logout, isSidebarOpen, fetchMe } = useStore();
   const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!session.isAuthenticated || session.user?.rol !== 'admin') {
+    const restoreSession = async () => {
+      if (!session.isAuthenticated) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        if (token) {
+          try { await fetchMe(); } catch { /* token inválido */ }
+        }
+      }
+      setIsReady(true);
+    };
+    restoreSession();
+  }, []);
+
+  useEffect(() => {
+    if (isReady && (!session.isAuthenticated || session.user?.rol !== 'admin')) {
       router.push('/');
     }
-  }, [session, router]);
+  }, [isReady, session, router]);
 
-  if (!session.isAuthenticated || session.user?.rol !== 'admin') {
-    return null;
+  if (!isReady || !session.isAuthenticated || session.user?.rol !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg text-gray-500">Cargando...</p>
+      </div>
+    );
   }
 
   const handleLogout = () => {
@@ -32,7 +50,7 @@ export default function AdminLayout({
     <div className="flex min-h-screen bg-white">
       <Sidebar />
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        {/* Botón Cerrar Sesión */}}
+        {/* Botón Cerrar Sesión */}
         <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex justify-end">
           <button
             onClick={handleLogout}

@@ -1,66 +1,76 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Trash2, X, Search } from 'lucide-react';
-import { Anuncio } from '@/types';
+import { ApiAnuncio } from '@/types';
 
 export default function AnunciosPage() {
-  const { anuncios, agregarAnuncio, actualizarAnuncio, eliminarAnuncio, session } = useStore();
+  const { anuncios, fetchAnuncios, agregarAnuncio, actualizarAnuncio, eliminarAnuncio, session } = useStore();
 
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingAnuncio, setEditingAnuncio] = useState<Anuncio | null>(null);
+  const [editingAnuncio, setEditingAnuncio] = useState<ApiAnuncio | null>(null);
   const [query, setQuery] = useState('');
 
   const [formData, setFormData] = useState({
     titulo: '',
-    cuerpo: '',
-    fecha: new Date().toISOString().split('T')[0],
+    mensaje: '',
   });
+
+  useEffect(() => {
+    const loadData = async () => {
+      try { await fetchAnuncios(); }
+      catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    loadData();
+  }, []);
 
   const anunciosFiltrados = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return anuncios;
     return anuncios.filter((a) => {
       const t = (a.titulo || '').toLowerCase();
-      const c = (a.cuerpo || '').toLowerCase();
+      const c = (a.mensaje || '').toLowerCase();
       return t.includes(q) || c.includes(q);
     });
   }, [anuncios, query]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingAnuncio) {
-      actualizarAnuncio(editingAnuncio.id, {
-        ...formData,
-        fecha: new Date(formData.fecha),
-      });
-    } else {
-      agregarAnuncio({
-        ...formData,
-        fecha: new Date(formData.fecha),
-        createdBy: session.user?.id || '',
-      });
+    try {
+      if (editingAnuncio) {
+        await actualizarAnuncio(editingAnuncio.id_anuncio, {
+          titulo: formData.titulo,
+          mensaje: formData.mensaje,
+        });
+      } else {
+        await agregarAnuncio({
+          titulo: formData.titulo,
+          mensaje: formData.mensaje,
+          id_admin_fk: session.user?.id_admin || session.user?.apiUserId,
+        });
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Error guardando anuncio:', err);
     }
-
-    closeModal();
   };
 
-  const openModal = (anuncio?: Anuncio) => {
+  const openModal = (anuncio?: ApiAnuncio) => {
     if (anuncio) {
       setEditingAnuncio(anuncio);
       setFormData({
         titulo: anuncio.titulo,
-        cuerpo: anuncio.cuerpo,
-        fecha: new Date(anuncio.fecha).toISOString().split('T')[0],
+        mensaje: anuncio.mensaje,
       });
     } else {
       setEditingAnuncio(null);
       setFormData({
         titulo: '',
-        cuerpo: '',
-        fecha: new Date().toISOString().split('T')[0],
+        mensaje: '',
       });
     }
     setShowModal(true);
@@ -71,9 +81,20 @@ export default function AnunciosPage() {
     setEditingAnuncio(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('¿Está seguro de eliminar este anuncio?')) eliminarAnuncio(id);
+  const handleDelete = async (id: number) => {
+    if (confirm('¿Está seguro de eliminar este anuncio?')) {
+      try { await eliminarAnuncio(id); }
+      catch (err) { console.error('Error eliminando anuncio:', err); }
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-lg text-gray-500">Cargando anuncios...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white px-8 py-8">
@@ -136,12 +157,12 @@ export default function AnunciosPage() {
           <div className="space-y-4">
             {anunciosFiltrados.map((anuncio) => (
               <div
-                key={anuncio.id}
+                key={anuncio.id_anuncio}
                 className="relative rounded-xl border-2 border-gray-300 bg-white p-5"
               >
                 {/* Trash */}
                 <button
-                  onClick={() => handleDelete(anuncio.id)}
+                  onClick={() => handleDelete(anuncio.id_anuncio)}
                   className="absolute right-4 top-4 rounded-lg p-2 text-red-500 transition hover:bg-red-50"
                   aria-label="Eliminar"
                 >
@@ -153,11 +174,11 @@ export default function AnunciosPage() {
                 </h3>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  {anuncio.fecha ? new Date(anuncio.fecha).toLocaleDateString('sv-SE') : '2025-01-15'}
+                  {anuncio.fecha_publicacion ? new Date(anuncio.fecha_publicacion).toLocaleDateString('sv-SE') : (anuncio.createdAt ? new Date(anuncio.createdAt).toLocaleDateString('sv-SE') : '')}
                 </p>
 
                 <p className="mt-3 text-base text-gray-900">
-                  {anuncio.cuerpo || 'Cuerpo del comunicado'}
+                  {anuncio.mensaje || 'Cuerpo del comunicado'}
                 </p>
 
                 {/* Acciones */}
@@ -223,24 +244,11 @@ export default function AnunciosPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Fecha
-                </label>
-                <input
-                  type="date"
-                  value={formData.fecha}
-                  onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-[#5B63D6] focus:ring-2 focus:ring-[#5B63D6]/30"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
                   Cuerpo del comunicado
                 </label>
                 <textarea
-                  value={formData.cuerpo}
-                  onChange={(e) => setFormData({ ...formData, cuerpo: e.target.value })}
+                  value={formData.mensaje}
+                  onChange={(e) => setFormData({ ...formData, mensaje: e.target.value })}
                   placeholder="Contenido del anuncio..."
                   rows={6}
                   className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-[#5B63D6] focus:ring-2 focus:ring-[#5B63D6]/30"
