@@ -12,6 +12,9 @@ export default function AnunciosPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingAnuncio, setEditingAnuncio] = useState<ApiAnuncio | null>(null);
   const [query, setQuery] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     titulo: '',
@@ -39,6 +42,8 @@ export default function AnunciosPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setFormError(null);
 
     try {
       if (editingAnuncio) {
@@ -47,19 +52,32 @@ export default function AnunciosPage() {
           mensaje: formData.mensaje,
         });
       } else {
-        await agregarAnuncio({
+        const payload = {
           titulo: formData.titulo,
           mensaje: formData.mensaje,
           id_admin_fk: session.user?.id_admin || session.user?.apiUserId,
-        });
+        };
+        console.log('[Anuncios] Enviando payload:', payload);
+        await agregarAnuncio(payload);
       }
+      setSuccessMsg(editingAnuncio ? 'Anuncio actualizado correctamente' : 'Anuncio creado correctamente');
+      setTimeout(() => setSuccessMsg(null), 3000);
       closeModal();
-    } catch (err) {
-      console.error('Error guardando anuncio:', err);
+    } catch (err: any) {
+      const mensaje =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Error desconocido al guardar el anuncio';
+      console.error('Error guardando anuncio:', err?.response?.data || err);
+      setFormError(mensaje);
+    } finally {
+      setSaving(false);
     }
   };
 
   const openModal = (anuncio?: ApiAnuncio) => {
+    setFormError(null);
     if (anuncio) {
       setEditingAnuncio(anuncio);
       setFormData({
@@ -151,6 +169,13 @@ export default function AnunciosPage() {
         </button>
       </div>
 
+      {/* Mensaje de éxito */}
+      {successMsg && (
+        <div className="mt-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+          {successMsg}
+        </div>
+      )}
+
       {/* Contenedor con scroll */}
       <div className="mt-4 rounded-xl border-2 border-gray-300 bg-white p-3">
         <div className="h-[520px] overflow-y-auto pr-2">
@@ -228,6 +253,13 @@ export default function AnunciosPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 p-5">
+              {formError && (
+                <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <p className="font-semibold">Error al guardar:</p>
+                  <p>{formError}</p>
+                </div>
+              )}
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-gray-700">
                   Título
@@ -267,9 +299,10 @@ export default function AnunciosPage() {
 
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-[#5B63D6] py-3 text-base font-bold text-white transition hover:opacity-90"
+                  disabled={saving}
+                  className="w-full rounded-xl bg-[#5B63D6] py-3 text-base font-bold text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Guardar
+                  {saving ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

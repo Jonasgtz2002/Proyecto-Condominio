@@ -12,7 +12,7 @@ export const anunciosService = {
 
   getByEdificio: (edificioId: string | number) =>
     api.get(`/anuncios/edificio/${edificioId}`),
-
+ 
   getByTipo: (tipo: string) =>
     api.get(`/anuncios/tipo/${tipo}`),
 
