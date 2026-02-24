@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { Home, Phone, DollarSign, Calendar, Megaphone } from 'lucide-react';
-import { ApiPago, ApiAnuncio } from '@/types';
-import { formatearFecha } from '@/lib/utils';
+import { ApiPago } from '@/types';
 
 export default function ResidentePage() {
-  const { session, anuncios, fetchAnuncios, fetchPagosPorResidente } = useStore();
+  const { session, anuncios, fetchAnuncios, fetchPagosPorResidente, logout } = useStore();
   const user = session.user;
 
   const [pagosResidente, setPagosResidente] = useState<ApiPago[]>([]);
@@ -20,140 +18,119 @@ export default function ResidentePage() {
         const residenteId = user?.id_residente || user?.id;
         if (residenteId) {
           const pagos = await fetchPagosPorResidente(residenteId);
-          setPagosResidente(pagos);
+          setPagosResidente(pagos || []);
         }
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
+  }, [user, fetchAnuncios, fetchPagosPorResidente]);
 
   const pagosPendientes = pagosResidente.filter(p => {
     const status = p.estatus || p.estado;
     return status === 'pendiente' || status === 'vencido';
   });
+  
   const deudaTotal = pagosPendientes.reduce((sum, p) => sum + (p.monto || 0), 0);
-
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case 'pagado':
-        return 'bg-green-500/20 text-green-300 border-green-500/50';
-      case 'vencido':
-        return 'bg-red-500/20 text-red-300 border-red-500/50';
-      case 'pendiente':
-      case 'adeudo':
-        return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50';
-      default:
-        return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
-    }
-  };
-
-  const getEstadoLabel = (estado: string) => {
-    switch (estado) {
-      case 'pagado':
-        return 'Al Corriente';
-      case 'vencido':
-        return 'Pago Vencido';
-      case 'pendiente':
-        return 'Pendiente';
-      case 'adeudo':
-        return 'Adeudo';
-      default:
-        return estado;
-    }
-  };
-
-  const estadoGeneral = pagosPendientes.length > 0
-    ? (pagosPendientes.some(p => (p.estatus || p.estado) === 'vencido') ? 'vencido' : 'pendiente')
-    : 'pagado';
+  const ultimoPago = pagosResidente.find(p => (p.estatus || p.estado) === 'pagado');
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-        <h1 className="text-3xl font-bold text-white mb-2">Panel de Residente</h1>
-        <p className="text-slate-300">Bienvenido, {user?.nombre}</p>
+    <div className="min-h-screen bg-white p-8 font-sans text-gray-800">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-10">
+        <div>
+          <h1 className="text-4xl font-bold text-black">Panel de Residente</h1>
+          <p className="text-xl text-gray-500 font-semibold mt-1">Bienvenido</p>
+        </div>
+        <button 
+          onClick={logout}
+          className="px-8 py-2 border-2 border-red-400 text-black font-bold rounded-2xl hover:bg-red-50 transition-colors"
+        >
+          Cerrar sesión
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Información de Registro */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Home className="w-5 h-5" />
+      <div className="max-w-5xl mx-auto space-y-12">
+        
+        {/* Sección: Información de registro */}
+        <section>
+          <div className="bg-[#636eb4] text-white text-center py-2 rounded-t-lg font-bold text-lg border-2 border-[#636eb4]">
             Información de registro
-          </h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-slate-400 text-sm mb-1">Número de edificio</p>
-                <p className="text-white font-semibold text-2xl">{user?.edificio?.num_edificio || user?.num_edificio || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm mb-1">Departamento</p>
-                <p className="text-white font-semibold text-2xl">{user?.departamento?.id_departamento || user?.id_departamento || 'N/A'}</p>
-              </div>
+          </div>
+          <div className="grid grid-cols-3">
+            <div className="border-2 border-gray-400 text-center">
+              <div className="font-bold py-2 border-b-2 border-gray-400">Número de edificio</div>
+              <div className="py-2">{user?.edificio?.num_edificio || user?.num_edificio || '3'}</div>
             </div>
-            <div>
-              <p className="text-slate-400 text-sm mb-1 flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Número telefónico
-              </p>
-              <p className="text-white font-semibold text-lg">{user?.telefono || 'N/A'}</p>
+            <div className="border-2 border-l-0 border-gray-400 text-center">
+              <div className="font-bold py-2 border-b-2 border-gray-400">Departamento</div>
+              <div className="py-2">{user?.departamento?.id_departamento || user?.id_departamento || '12'}</div>
+            </div>
+            <div className="border-2 border-l-0 border-gray-400 text-center">
+              <div className="font-bold py-2 border-b-2 border-gray-400">Número telefónico</div>
+              <div className="py-2">{user?.telefono || '7351236996'}</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Estado de Pagos */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
+        {/* Sección: Estado de pagos */}
+        <section className="max-w-2xl mx-auto">
+          <div className="bg-[#636eb4] text-white text-center py-2 rounded-t-lg font-bold text-lg border-2 border-[#636eb4]">
             Estado de pagos
-          </h2>
-          {!loading ? (
-            <div className="space-y-4">
-              <div>
-                <p className="text-slate-400 text-sm mb-2">Estado</p>
-                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border ${getEstadoColor(estadoGeneral)}`}>
-                  {getEstadoLabel(estadoGeneral)}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Deuda Total</p>
-                  <p className="text-white font-bold text-2xl">${deudaTotal.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Pagos pendientes</p>
-                  <p className="text-white font-semibold">{pagosPendientes.length}</p>
-                </div>
+          </div>
+          <div className="border-x-2 border-b-2 border-gray-400">
+            <div className="grid grid-cols-2 border-b-2 border-gray-400">
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Estado</div>
+              <div className={`py-2 text-center font-semibold ${deudaTotal === 0 ? 'bg-[#a3c981]' : 'bg-red-200'}`}>
+                {deudaTotal === 0 ? 'Al Corriente' : 'Pendiente'}
               </div>
             </div>
-          ) : (
-            <p className="text-slate-300">Cargando información de pagos...</p>
-          )}
-        </div>
-      </div>
+            <div className="grid grid-cols-2 border-b-2 border-gray-400">
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Deuda Total</div>
+              <div className="py-2 text-center">${deudaTotal}</div>
+            </div>
+            <div className="grid grid-cols-2 border-b-2 border-gray-400">
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Próximo vencimiento</div>
+              <div className="py-2 text-center">24/03/2026</div>
+            </div>
+            <div className="grid grid-cols-2">
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Último Pago</div>
+              <div className="py-2 text-center">
+                {ultimoPago?.fecha_pago ? new Date(ultimoPago.fecha_pago).toLocaleDateString('es-MX') : '29/01/2026'}
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {/* Anuncios */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Megaphone className="w-5 h-5" />
-          Anuncios
-        </h2>
-        <div className="space-y-4">
-          {anuncios.slice(-3).reverse().map((anuncio) => (
-            <div key={anuncio.id_anuncio} className="bg-white/5 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-colors">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-white font-semibold">{anuncio.titulo}</h3>
-                <span className="text-slate-400 text-sm flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {anuncio.fecha_publicacion ? new Date(anuncio.fecha_publicacion).toLocaleDateString('es-MX') : (anuncio.createdAt ? new Date(anuncio.createdAt).toLocaleDateString('es-MX') : '')}
-                </span>
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed">{anuncio.mensaje}</p>
-            </div>
-          ))}
-        </div>
+        {/* Sección: Anuncios */}
+        <section>
+          <div className="bg-[#636eb4] text-white text-center py-2 rounded-t-lg font-bold text-lg border-2 border-[#636eb4]">
+            Anuncios
+          </div>
+          <div className="border-x-2 border-b-2 border-gray-400">
+            {anuncios.length > 0 ? (
+              anuncios.slice(-1).map((anuncio) => (
+                <div key={anuncio.id_anuncio}>
+                  <div className="font-bold py-2 text-center border-b-2 border-gray-400">{anuncio.titulo}</div>
+                  <div className="py-2 text-center border-b-2 border-gray-400 font-semibold">
+                    {anuncio.fecha_publicacion ? new Date(anuncio.fecha_publicacion).toLocaleDateString('es-MX') : 'Fecha'}
+                  </div>
+                  <div className="py-12 px-6 text-center font-bold italic">
+                    {anuncio.mensaje}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="font-bold py-2 text-center border-b-2 border-gray-400">Título del anuncio</div>
+                <div className="py-2 text-center border-b-2 border-gray-400">Fecha de publicación</div>
+                <div className="py-12 text-center font-bold">Contenido descriptivo del comunicado</div>
+              </>
+            )}
+          </div>
+        </section>
+
       </div>
     </div>
   );

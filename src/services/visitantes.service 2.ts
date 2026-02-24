@@ -26,8 +26,8 @@ export const visitantesService = {
     api.delete(`/visitantes/${id}`),
 
   registrarEntrada: (id: string | number) =>
-    api.patch(`/visitantes/${id}/activar`),
+    api.patch(`/visitantes/${id}/entrada`),
 
   registrarSalida: (id: string | number) =>
-    api.patch(`/visitantes/${id}/desactivar`),
+    api.patch(`/visitantes/${id}/salida`),
 };

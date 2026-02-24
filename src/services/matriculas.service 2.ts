@@ -7,9 +7,6 @@ export const matriculasService = {
   getById: (id: string | number) =>
     api.get(`/matriculas/${id}`),
 
-  buscar: (matricula: string) =>
-    api.get(`/matriculas/${encodeURIComponent(matricula)}`),
-
   getByResidente: (residenteId: string | number) =>
     api.get(`/matriculas/residente/${residenteId}`),
 

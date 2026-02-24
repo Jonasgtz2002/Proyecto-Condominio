@@ -7,8 +7,8 @@ export const accesosService = {
   getById: (id: string | number) =>
     api.get(`/accesos/${id}`),
 
-  getActivos: () =>
-    api.get('/accesos/activos'),
+  getHoy: () =>
+    api.get('/accesos/hoy'),
 
   getByResidente: (residenteId: string | number) =>
     api.get(`/accesos/residente/${residenteId}`),
@@ -22,14 +22,8 @@ export const accesosService = {
   getByTipo: (tipo: 'entrada' | 'salida') =>
     api.get(`/accesos/tipo/${tipo}`),
 
-  getByMatricula: (matricula: string) =>
-    api.get(`/accesos/matricula/${matricula}`),
-
-  registrarEntrada: (data: any) =>
-    api.post('/accesos/entrada', data),
-
-  registrarSalida: (id: string | number) =>
-    api.patch(`/accesos/${id}/salida`),
+  create: (data: any) =>
+    api.post('/accesos', data),
 
   update: (id: string | number, data: any) =>
     api.put(`/accesos/${id}`, data),

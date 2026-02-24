@@ -178,6 +178,7 @@ export default function UsuariosPage() {
           id_usuario_fk: newUserId,
           id_edificio_fk: finalEdificioId,
           id_departamento_fk: finalDeptoId,
+          matricula: formData.matricula.trim() || undefined,
         });
       }
       closeModal();

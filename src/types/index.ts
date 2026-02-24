@@ -190,6 +190,7 @@ export interface ApiAcceso {
   id_cajon_fk?: number;
   id_vigilante_fk?: number;
   id_visitante_fk?: number;
+  matricula?: ApiMatricula;
   matriculaRel?: ApiMatricula;
   vigilante?: ApiVigilante;
   visitante?: ApiVisitante;

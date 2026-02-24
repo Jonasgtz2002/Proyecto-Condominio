@@ -72,7 +72,7 @@ interface AppState {
   fetchCajones: () => Promise<void>;
   fetchMatriculas: () => Promise<void>;
   fetchAccesos: () => Promise<void>;
-  fetchAccesosHoy: () => Promise<void>;
+  fetchAccesosActivos: () => Promise<void>;
   fetchAccesosPorResidente: (residenteId: number) => Promise<ApiAcceso[]>;
   fetchPagos: () => Promise<void>;
   fetchPagosPendientes: () => Promise<void>;
@@ -98,6 +98,7 @@ interface AppState {
 
   // ── CRUD Accesos ──
   registrarAcceso: (data: any) => Promise<void>;
+  buscarMatriculaEnAPI: (matricula: string) => Promise<ApiMatricula | null>;
 
   // ── CRUD Pagos ──
   agregarPago: (data: any) => Promise<void>;
@@ -185,8 +186,9 @@ export const useStore = create<AppState>()(
               const profileRes = await administradoresService.getByUsuario(user.id);
               profile = profileRes.data;
             }
-          } catch {
+          } catch (profileError) {
             // Profile fetch may fail, continue with basic user info
+            console.warn('Profile fetch failed for role', user.rol, ':', profileError);
           }
 
           const sessionUser = {
@@ -385,11 +387,11 @@ export const useStore = create<AppState>()(
         } catch (e) { console.error('Error fetching accesos:', e); }
       },
 
-      fetchAccesosHoy: async () => {
+      fetchAccesosActivos: async () => {
         try {
-          const res = await accesosService.getHoy();
+          const res = await accesosService.getActivos();
           set({ accesosHoy: Array.isArray(res.data) ? res.data : [] });
-        } catch (e) { console.error('Error fetching accesos hoy:', e); }
+        } catch (e) { console.error('Error fetching accesos activos:', e); }
       },
 
       fetchAccesosPorResidente: async (residenteId: number) => {
@@ -496,6 +498,7 @@ export const useStore = create<AppState>()(
         try {
           await visitantesService.create(data);
           await get().fetchVisitantes();
+          await get().fetchVisitantesActivos();
         } catch (e) { console.error('Error creating visitante:', e); throw e; }
       },
 
@@ -516,9 +519,21 @@ export const useStore = create<AppState>()(
       // ────────────── CRUD Accesos ──────────────
       registrarAcceso: async (data) => {
         try {
-          await accesosService.create(data);
+          await accesosService.registrarEntrada(data);
           await get().fetchAccesos();
+          await get().fetchAccesosActivos();
         } catch (e) { console.error('Error registrando acceso:', e); throw e; }
+      },
+
+      buscarMatriculaEnAPI: async (matricula: string) => {
+        try {
+          const res = await matriculasService.buscar(matricula);
+          return res.data || null;
+        } catch (e: any) {
+          if (e?.response?.status === 404) return null;
+          console.error('Error buscando matrícula:', e);
+          return null;
+        }
       },
 
       // ────────────── CRUD Pagos ──────────────

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { Search, Plus, X, UserX } from 'lucide-react';
+import { Search, Plus, X, UserX, AlertCircle, Loader2 } from 'lucide-react';
 import { ApiVisitante } from '@/types';
 import { formatearFecha } from '@/lib/utils';
 
@@ -12,30 +12,44 @@ export default function VisitantesActivosPage() {
     fetchVisitantesActivos,
     registrarSalidaVisitante,
     agregarVisitante,
-    residentes,
-    fetchResidentes,
+    edificios,
+    fetchEdificios,
+    departamentos,
+    fetchDepartamentos,
   } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
     empresa: '',
     categoria: '',
     id_edificio_fk: '',
+    id_departamento_fk: '',
+    matricula: '',
   });
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        await Promise.all([fetchVisitantesActivos(), fetchResidentes()]);
+        await Promise.all([fetchVisitantesActivos(), fetchEdificios(), fetchDepartamentos()]);
       } finally {
         setLoading(false);
       }
     };
     loadData();
   }, []);
+
+  // Filter departamentos by selected edificio
+  const filteredDepartamentos = useMemo(() => {
+    if (!formData.id_edificio_fk) return [];
+    return departamentos.filter(
+      (d) => d.id_edificio_fk === Number(formData.id_edificio_fk)
+    );
+  }, [departamentos, formData.id_edificio_fk]);
 
   const filteredVisitantes = useMemo(() => {
     return visitantesActivos.filter(
@@ -47,18 +61,25 @@ export default function VisitantesActivosPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    setSubmitting(true);
     try {
       await agregarVisitante({
         nombre: formData.nombre,
         empresa: formData.empresa || undefined,
         categoria: formData.categoria || undefined,
-        id_edificio_fk: Number(formData.id_edificio_fk) || undefined,
+        id_edificio_fk: Number(formData.id_edificio_fk),
+        id_departamento_fk: Number(formData.id_departamento_fk),
         activo: 'S',
+        matricula: formData.matricula.trim() || undefined,
       });
-      await fetchVisitantesActivos();
       closeModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al registrar visitante:', error);
+      const msg = error?.response?.data?.message || error?.message || 'Error al registrar visitante';
+      setFormError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -71,7 +92,8 @@ export default function VisitantesActivosPage() {
   };
 
   const openModal = () => {
-    setFormData({ nombre: '', empresa: '', categoria: '', id_edificio_fk: '' });
+    setFormData({ nombre: '', empresa: '', categoria: '', id_edificio_fk: '', id_departamento_fk: '', matricula: '' });
+    setFormError(null);
     setShowModal(true);
   };
 
@@ -187,11 +209,18 @@ export default function VisitantesActivosPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              {formError && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-red-700 text-sm">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               <input
                 type="text"
                 value={formData.nombre}
                 onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                placeholder="Nombre"
+                placeholder="Nombre *"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
                 required
               />
@@ -216,11 +245,57 @@ export default function VisitantesActivosPage() {
                 <option value="otros">Otros</option>
               </select>
 
+              <input
+                type="text"
+                value={formData.matricula}
+                onChange={(e) => setFormData({ ...formData, matricula: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') })}
+                placeholder="Matrícula del vehículo (opcional)"
+                maxLength={15}
+                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7] font-mono"
+              />
+
+              <select
+                value={formData.id_edificio_fk}
+                onChange={(e) => setFormData({ ...formData, id_edificio_fk: e.target.value, id_departamento_fk: '' })}
+                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+                required
+              >
+                <option value="">Seleccionar Edificio *</option>
+                {edificios.map((ed) => (
+                  <option key={ed.id_edificio} value={ed.id_edificio}>
+                    Edificio {ed.num_edificio}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={formData.id_departamento_fk}
+                onChange={(e) => setFormData({ ...formData, id_departamento_fk: e.target.value })}
+                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+                required
+                disabled={!formData.id_edificio_fk}
+              >
+                <option value="">{formData.id_edificio_fk ? 'Seleccionar Departamento *' : 'Primero selecciona un edificio'}</option>
+                {filteredDepartamentos.map((dep) => (
+                  <option key={dep.id_departamento} value={dep.id_departamento}>
+                    Departamento {dep.id_departamento}
+                  </option>
+                ))}
+              </select>
+
               <button
                 type="submit"
-                className="w-full h-11 rounded-lg bg-[#5d6bc7] text-white font-semibold hover:brightness-110 transition"
+                disabled={submitting}
+                className="w-full h-11 rounded-lg bg-[#5d6bc7] text-white font-semibold hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
-                Registrar
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Registrando…
+                  </>
+                ) : (
+                  'Registrar'
+                )}
               </button>
             </form>
           </div>

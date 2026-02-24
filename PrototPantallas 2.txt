@@ -1,0 +1,1054 @@
+USUARIO O CONTRASEÑA INCORRECTOS‌
+
+‌Correo electrónico‌
+‌Contraseña‌
+
+Iniciar sesión
+¿Olvidaste tu contraseña?
+
+llllll
+
+Cerrar sesión
+
+Panel de administrador
+Residentes
+
+Gestión de la Unidad Habitacional
+Estacionamiento
+
+Vigilancia
+Vigilancia
+Estacionamiento
+Pagos
+Pagos
+Anuncios
+Anuncios
+
+E1 01
+
+E1 02
+
+E1 02
+
+E1 01
+
+E1 01
+
+E1 01
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+E1 02
+
+llllll
+
+Cerrar sesión
+
+Panel de administrador
+Residentes
+
+Gestión de la Unidad Habitacional
+Estatus de pagos
+
+Vigilancia
+Vigilancia
+Estacionamiento
+Pagos
+Pagos
+Anuncios
+Anuncios
+
+Residente
+
+Estado
+
+Deuda total
+
+Próximo
+vencimiento
+
+Último pago
+
+Nombre
+
+Pagado
+
+$
+
+--/--/----
+
+--/--/----
+
+Nombre
+
+Pago Vencido
+
+$
+
+--/--/----
+
+--/--/----
+
+Nombre
+
+Pagado
+
+$
+
+--/--/----
+
+--/--/----
+
+Nombre
+
+Pago Vencido
+
+$
+
+--/--/----
+
+--/--/----
+
+Nombre
+
+Pagado
+
+$
+
+--/--/----
+
+--/--/----
+
+lll
+
+Cerrar sesión
+
+Directorio de residentes
+Información sobre los residentes
+
+Nombre
+
+lll
+
+Buscar
+
+Edificio
+
+Departamento
+
+Filtrar
+
+Email
+
++ Nuevo Residente
+Teléfono
+
+Estatus
+
+Acciones
+
+Pagado
+
+Vencido
+
+Pagado
+
+Vencido
+
++
+
+lll
+
+Cerrar sesión
+
+Directorio de residentes
+Información sobre los residentes
+
+Nombre
+
+lll
+
+Buscar
+
+Edificio
+
+Departamento
+
+Filtrar
+
+Email
+
++ Nuevo Residente
+Teléfono
+
+Estatus
+
+Acciones
+
+Pagado
+
+Vencido
+
+Pagado
+
+Vencido
+
++
+
+lll
+
+Cerrar sesión
+
+Directorio de residentes
+Información sobre los residentes
+
+lll
+
+Buscar
+
+Filtrar
+
++ Nuevo Residente
+
+1.
+
+Nombre
+
+Edificio
+
+Departamento
+
+Matricula
+2. Nombre
+
+Teléfono
+
+Estatus
+
+Acciones
+
+Pagado
+
+Vencido
+
+Pagado
+
+Vencido
+
++
+
+lll
+
+Cerrar sesión
+
+Información sobre los residentes
+
+Nombre
+
+Buscar
+
+Nombre
+
+lll
+
+Directorio de residentes
++ Nuevo Residente
+ej. José Martínez
+Departamento
+Edificio
+
+Filtrar
+
+Email
+
++ Nuevo Residente
+
+Teléfono
+
+Número de edificio
+
+Estatus
+
+Acciones
+
+ej. 3
+Pagado
+
+Número de departamento
+
+ej. 7b
+
+Vencido
+
+Número telefónico
+
+Tip
+o
+
+ej. 555-222-333
+Matrícula
+
+Edif
+icio
+
+ej. 423-24b
+Guardar
+Correo electrónico
+
+ej. persona@gmai.com
+
+Guardar
+
+Pagado
+
+Vencido
+
++
+
+lll
+
+Cerrar sesión
+
+Directorio de residentes
+Residentes
+
+Buscar
+
+Nombre
+
+Nombre
+
+Edificio
+
+lll
+
++ Nuevo Residente
+
+ej. José Martínez
+Departamento
+
+Filtrar
+
+Email
+
++ Nuevo Residente
+Teléfono
+
+Estatus
+
+Acciones
+
+Número de edificio
+
+ej. 3
+
+Pagado
+
+ADVERTENCIA
+
+Número de departamento
+
+Error el correo:
+ej. 7b persona@gmail.com ya existe, intente de nuevo
+
+Número telefónico
+
+ej. 555-222-333
+Matrícula
+
+ej. 423-24b
+Guardar
+Correo electrónico
+
+ej. persona@gmai.com
+
+Vencido
+
+Pagado
+Tip
+o
+
+Vencido
+Edif
+icio
+
++
+
+lll
+
+Cerrar sesión
+
+Vigilantes
+Información sobre los vigilantes
+
+Nombre
+
+lll
+
+Buscar
+
+Teléfono
+
+Email
+
+Filtrar
+
+Fecha de alta
+
++ Nuevo Residente
+
+Turno
+
+Estado
+
+Acciones
+
+Activo
+
+Editar
+M
+
+Inactivo
+
+Editar
+
+Activo
+
+M
+Editar
+
+Inactivo
+
+Editar
+M
+
++
+
+lll
+
+Cerrar sesión
+
+Vigilantes
+Información sobre los vigilantes
+
+lll
+lll
+
+Buscar
+
+1.
+
+Nombre
+
+Teléfono
+
+Email
+
+Filtrar
+
+Turno
+2. Nombre
+Fecha de alta
+
++ Nuevo Residente
+
+Turno
+
+Estado
+
+Acciones
+
+Activo
+
+Editar
+M
+
+Inactivo
+
+Editar
+
+Activo
+
+M
+Editar
+
+Inactivo
+
+Editar
+M
+
++
+
+lll
+
+Cerrar sesión
+
+Nombre
+
+Buscar
+
+Nombre
+
+ej. José Martínez
+Departamento
+Teléfono
+
+lll
+
+Información sobre los vigilantes
+
++ Nuevo Vigilante
+Filtrar
+
+lll
+
+Vigilantes
+
+Filtrar
+
+Número telefónico
+Departamento
+Email
+
+Email
+
+Teléfono
+
+Email
+Fecha de alta
+
+Teléfono
+Turno
+
++ Nuevo Residente
+Estado
+
+Acciones
+
+ej. 555-222-333
+Activo
+
+Editar
+M
+
+Inactivo
+
+Editar
+
+Activo
+
+M
+Editar
+
+Inactivo
+
+Editar
+M
+
+Correo electrónico
+
+ej. persona@gmai.com
+
+Guardar
+
+Tip
+o
+
++
+
+lll
+
+Cerrar sesión
+
+Anuncios
+
+Publique avisos para los residentes
+
+Buscar
+
++ Nuevo Comunicado
+
++ Nuevo Comunicado
+
+Titulo
+2025-01-15
+Cuerpo del comunicado
+
+Archivo
+
+Editar
+
+Archivo
+
+Editar
+
+Titulo
+2025-01-15
+Cuerpo del comunicado
+
+lll
+
+Cerrar sesión
+
+Anuncios
+
+Publique avisos para los residentes
+
+Buscar
+
++ Nuevo Comunicado
+
++ Nuevo Comunicado
+
+Titulo
+
+Titulo
+
+2025-01-15
+
+2025-01-15
+
+Cuerpo del comunicado
+Cuerpo del comunicado
+
+Titulo
+
+Archivo
+
+Editar
+
+Archivo
+
+Editar
+
+Adjuntar Archivo
+
+2025-01-15
+Cuerpo del comunicado
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Verificación de Vehículos
+Buscar
+
+Ingrese matrícula
+
+n/10
+
+Registro Especial de Ingresos
+Delivery
+Empresa
+
+Transporte
+Hora
+
+Conductor
+
+Otros
+Edificio
+
+Visitante
+Placa
+Salida
+
+Eliminar
+
+Salida
+
+Eliminar
+
+Salida
+
+Eliminar
+
+llllll
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+Control
+de
+Residentes
+acceso
+Verificación de Vehículos
+Vigilancia
+Ingrese matrícula
+
+Buscar
+
+n/10
+
+Registro de
+Estacionamiento
+ingresos
+Pagos
+especiales
+Anuncios
+Registro Especial de Ingresos
+Delivery
+Empresa
+
+Transporte
+Hora
+
+Conductor
+
+Otros
+Edificio
+
+Visitante
+Placa
+Salida
+
+Eliminar
+
+Salida
+
+Eliminar
+
+Salida
+
+Eliminar
+
+lll
+
+Control de Acceso - Vigilancia
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Verificación de Vehículos
+Buscar
+
+XYZ9876QWE
+
+10/10
+
+Matrícula NO registrada en el
+sistema
+
+Cerrar sesión
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Verificación de Vehículos
+Buscar
+
+2025MEXDF1
+
+10/10
+
+Edificio
+
+Nombre
+
+Manuela lobezna perez
+Otorgar Acceso
+
+Denegar Acceso
+
+B2
+
+Deptartamento
+
+21
+
+Estado de Pago
+
+Pagado
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Verificación de Vehículos
+Buscar
+
+Ingrese matrícula
+
+n/10
+
+Acceso Otorgado – Bienvenido
+Manuela lobezna perez
+Nueva Búsqueda
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Verificación de Vehículos
+Buscar
+
+Ingrese matrícula
+
+n/10
+
+Acceso Denegado
+
+Nueva Búsqueda
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Registro Especial de Ingresos
+Delivery
+
+Transporte
+
+Otros
+
+Visitante
+
+Nombre del Conductor
+
+ej. José Martínez
+Placas
+
+ej. XYZ9876QWE
+Categoria
+
+ej. Rappi
+
+Tipo
+
+Edificio
+
+ej. 7b
+Guardar
+
+Edificio
+
+lll
+
+Control de Acceso - Vigilancia
+
+Cerrar sesión
+
+Sistema de verificación de vehículos y registros
+Verifica la matrícula del vehículo y consulta el estado de pago del residente antes de otorgar acceso
+
+Registro Especial de Ingresos
+Delivery
+
+Transporte
+
+Otros
+
+Visitante
+
+Nombre del Conductor
+
+ej. José Martínez
+Placas
+
+ej. XYZ9876QWE
+
+Rappi
+UberEats
+DoorDash
+
+Categoria
+
+ej. Rappi
+
+Glovo
+
+Tipo
+
+Edificio
+
+ej. 7b
+Guardar
+
+Edificio
+
+lll
+
+Panel de Residente
+
+Cerrar sesión
+
+Bienvenido
+
+Panel
+Residente
+
+Información de registro
+Número de edificio
+
+Departamento
+
+Número telefónico
+
+3
+
+12
+
+7351236996
+
+Estado de pagos
+Estado
+
+Al Corriente
+
+Deuda Total
+
+$0
+
+Próximo vencimiento
+
+24/03/2026
+
+Último Pago
+
+29/01/2026
+
+Anuncios
+Título del anuncio
+Fecha de publicación
+
+Contenido descriptivo del comunicado
+
+lll
+
+Panel de Residente
+
+Cerrar sesión
+
+Bienvenido
+
+Información de registro
+Número de edificio
+
+Departamento
+
+Número telefónico
+
+3
+
+12
+
+7351236996
+
+Estado de pagos
+Estado
+
+Al Corriente
+
+Deuda Total
+
+$0
+
+Próximo vencimiento
+
+24/03/2026
+
+Último Pago
+
+29/01/2026
+
+Anuncios
+Título del anuncio
+Fecha de publicación
+
+Contenido descriptivo del comunicado
+
+lll
+
+Panel de Residente
+
+Cerrar sesión
+
+Bienvenido
+
+Información de registro
+Número de edificio
+
+Departamento
+
+Número telefónico
+
+3
+
+12
+
+7351236996
+
+Estado de pagos
+Estado
+
+Adeudo
+
+Deuda Total
+
+$1250
+
+Próximo vencimiento
+
+24/03/2026
+
+Último Pago
+
+29/01/2026
+
+Anuncios
+Título del anuncio
+Fecha de publicación
+
+Contenido descriptivo del comunicado
+
+
