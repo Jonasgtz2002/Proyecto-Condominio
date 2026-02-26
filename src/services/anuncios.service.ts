@@ -16,11 +16,11 @@ export const anunciosService = {
   getByTipo: (tipo: string) =>
     api.get(`/anuncios/tipo/${tipo}`),
 
-  create: (data: any) =>
-    api.post('/anuncios', data),
+  create: (data: FormData | Record<string, any>) =>
+    api.post('/anuncios', data, data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined),
 
-  update: (id: string | number, data: any) =>
-    api.put(`/anuncios/${id}`, data),
+  update: (id: string | number, data: FormData | Record<string, any>) =>
+    api.put(`/anuncios/${id}`, data, data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined),
 
   delete: (id: string | number) =>
     api.delete(`/anuncios/${id}`),

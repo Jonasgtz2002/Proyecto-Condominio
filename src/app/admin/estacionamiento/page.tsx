@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 
 export default function EstacionamientoPage() {
@@ -16,23 +16,23 @@ export default function EstacionamientoPage() {
     loadData();
   }, []);
 
-  // Group cajones by edificio
-  const edificios = useMemo(() => {
-    const map = new Map<string, typeof cajones>();
-    cajones.forEach((c) => {
-      const key = c.departamento?.edificio?.num_edificio || `Depto ${c.id_departamento_fk || 'Sin asignar'}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(c);
-    });
-    return map;
-  }, [cajones]);
+  const getLabel = (espacio: typeof cajones[number]) => {
+    if (espacio.estado && espacio.estado !== 'ocupado' && espacio.estado !== 'disponible') {
+      return espacio.estado;
+    }
+    const edif = espacio.departamento?.edificio?.num_edificio || '';
+    const depto = espacio.departamento?.id_departamento || espacio.id_departamento_fk || '';
+    if (edif || depto) return `${edif} - Depto #${depto}`;
+    return `Cajón ${espacio.id_cajon}`;
+  };
 
-  // Get first building cajones for display
-  const firstEdificio = Array.from(edificios.keys())[0];
-  const espaciosEdificio = firstEdificio ? edificios.get(firstEdificio) || [] : [];
-  const half = Math.ceil(espaciosEdificio.length / 2);
-  const izquierda = espaciosEdificio.slice(0, half);
-  const derecha = espaciosEdificio.slice(half);
+  const isOcupado = (espacio: typeof cajones[number]) => {
+    return espacio.estado === 'ocupado';
+  };
+
+  const half = Math.ceil(cajones.length / 2);
+  const izquierda = cajones.slice(0, half);
+  const derecha = cajones.slice(half);
 
   if (loading) {
     return (
@@ -44,7 +44,7 @@ export default function EstacionamientoPage() {
 
   return (
     <div className="min-h-screen bg-white px-10 py-8">
-      {/* Top bar: título izquierda, botón derecha */}
+      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-6xl font-extrabold tracking-tight text-gray-900">
@@ -60,52 +60,64 @@ export default function EstacionamientoPage() {
             </p>
           </div>
         </div>
-
-        
       </div>
 
-      {/* Grid centrado como la imagen */}
-      <div className="mt-20 flex justify-center">
-        <div className="flex gap-24">
-          {/* Bloque izquierdo */}
-          <div className="grid grid-cols-3 gap-x-4 gap-y-6">
-            {izquierda.map((espacio) => (
-              <div
-                key={espacio.id_cajon}
-                className={[
-                  'flex h-44 w-40 items-center justify-center rounded-2xl',
-                  'select-none font-extrabold tracking-wide',
-                  'transition hover:opacity-90',
-                  espacio.estado === 'ocupado'
-                    ? 'bg-[#E4645C] text-white'
-                    : 'bg-[#9BC873] text-black',
-                ].join(' ')}
-              >
-                <span className="text-4xl">{espacio.id_cajon}</span>
-              </div>
-            ))}
-          </div>
+      {/* Grid */}
+      {cajones.length === 0 ? (
+        <div className="mt-16 text-center text-lg text-gray-500">
+          No hay cajones de estacionamiento registrados.
+        </div>
+      ) : (
+        <div className="mt-16 flex justify-center">
+          <div className="flex gap-24">
+            {/* Bloque izquierdo */}
+            <div className="grid grid-cols-3 gap-x-4 gap-y-6">
+              {izquierda.map((espacio) => (
+                <div
+                  key={espacio.id_cajon}
+                  className={[
+                    'flex h-44 w-40 flex-col items-center justify-center rounded-2xl px-2',
+                    'select-none font-extrabold tracking-wide',
+                    'transition hover:opacity-90',
+                    isOcupado(espacio)
+                      ? 'bg-[#E4645C] text-white'
+                      : 'bg-[#9BC873] text-black',
+                  ].join(' ')}
+                >
+                  <span className="text-3xl">{espacio.id_cajon}</span>
+                  <span className="mt-1 text-center text-[11px] font-semibold leading-tight opacity-80">
+                    {getLabel(espacio)}
+                  </span>
+                </div>
+              ))}
+            </div>
 
-          {/* Bloque derecho */}
-          <div className="grid grid-cols-3 gap-x-4 gap-y-6">
-            {derecha.map((espacio) => (
-              <div
-                key={espacio.id_cajon}
-                className={[
-                  'flex h-44 w-40 items-center justify-center rounded-2xl',
-                  'select-none font-extrabold tracking-wide',
-                  'transition hover:opacity-90',
-                  espacio.estado === 'ocupado'
-                    ? 'bg-[#E4645C] text-white'
-                    : 'bg-[#9BC873] text-black',
-                ].join(' ')}
-              >
-                <span className="text-4xl">{espacio.id_cajon}</span>
+            {/* Bloque derecho */}
+            {derecha.length > 0 && (
+              <div className="grid grid-cols-3 gap-x-4 gap-y-6">
+                {derecha.map((espacio) => (
+                  <div
+                    key={espacio.id_cajon}
+                    className={[
+                      'flex h-44 w-40 flex-col items-center justify-center rounded-2xl px-2',
+                      'select-none font-extrabold tracking-wide',
+                      'transition hover:opacity-90',
+                      isOcupado(espacio)
+                        ? 'bg-[#E4645C] text-white'
+                        : 'bg-[#9BC873] text-black',
+                    ].join(' ')}
+                  >
+                    <span className="text-3xl">{espacio.id_cajon}</span>
+                    <span className="mt-1 text-center text-[11px] font-semibold leading-tight opacity-80">
+                      {getLabel(espacio)}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

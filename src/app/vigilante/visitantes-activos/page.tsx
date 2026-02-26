@@ -86,8 +86,10 @@ export default function VisitantesActivosPage() {
   const handleSalida = async (id: number) => {
     try {
       await registrarSalidaVisitante(id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al registrar salida:', error);
+      const msg = error?.response?.data?.message || error?.message || 'Error al registrar salida';
+      alert(msg);
     }
   };
 

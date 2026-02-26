@@ -48,7 +48,6 @@ export function Sidebar() {
       case 'residente':
         return [
           { href: '/residente', label: 'Panel', icon: <LayoutDashboard className="w-6 h-6" /> },
-          { href: '/residente/historial', label: 'Historial', icon: <History className="w-6 h-6" /> },
         ];
       default:
         return [];

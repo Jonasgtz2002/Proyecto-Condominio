@@ -20,14 +20,8 @@ export default function PagosPage() {
     switch (estado) {
       case 'pagado':
         return { label: 'Pagado', dot: 'bg-[#86B95B]' };
-      case 'vencido':
-        return { label: 'Pago Vencido', dot: 'bg-[#E25B52]' };
-      case 'adeudo':
-        return { label: 'Adeudo', dot: 'bg-[#F2C94C]' };
-      case 'pendiente':
-        return { label: 'Pendiente', dot: 'bg-[#F2C94C]' };
       default:
-        return { label: estado || 'Sin estado', dot: 'bg-gray-400' };
+        return { label: 'Pago Vencido', dot: 'bg-[#E25B52]' };
     }
   };
 

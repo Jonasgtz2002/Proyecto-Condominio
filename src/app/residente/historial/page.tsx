@@ -118,7 +118,7 @@ export default function HistorialPage() {
             <CardContent className="p-6">
               <p className="text-sm font-medium text-gray-600">Total de Visitas</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {historial.filter((r) => !r.hora_salida).length}
+                {historial.length}
               </p>
             </CardContent>
           </Card>
@@ -142,8 +142,7 @@ export default function HistorialPage() {
                   return (
                     fecha &&
                     fecha.getMonth() === hoy.getMonth() &&
-                    fecha.getFullYear() === hoy.getFullYear() &&
-                    !r.hora_salida
+                    fecha.getFullYear() === hoy.getFullYear()
                   );
                 }).length}
               </p>

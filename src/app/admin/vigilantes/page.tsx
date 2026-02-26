@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { Search, Plus, Edit2, Trash2, X, Filter, Menu, LogOut } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Filter, Menu, ArrowUpDown } from 'lucide-react';
 import { ApiVigilante } from '@/types';
 import { formatearFecha } from '@/lib/utils';
+
+type SortField = 'nombre' | 'turno' | 'fecha_alta';
+type SortDir = 'asc' | 'desc';
 
 export default function VigilantesPage() {
   const {
@@ -17,8 +20,18 @@ export default function VigilantesPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [filterTurno, setFilterTurno] = useState<string>('todos');
+  const [sortField, setSortField] = useState<SortField>('nombre');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [showModal, setShowModal] = useState(false);
   const [editingVigilante, setEditingVigilante] = useState<ApiVigilante | null>(null);
+
+  const [formError, setFormError] = useState('');
+  const [toastError, setToastError] = useState('');
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -26,7 +39,18 @@ export default function VigilantesPage() {
     email: '',
     password: '',
     telefono: '',
+    turno: 'matutino',
+    fechaAlta: todayISO,
   });
+
+  // Auto-dismiss toast after 8 seconds
+  useEffect(() => {
+    if (toastError) {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToastError(''), 8000);
+    }
+    return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); };
+  }, [toastError]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -37,22 +61,74 @@ export default function VigilantesPage() {
     loadData();
   }, []);
 
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
   const filteredVigilantes = useMemo(() => {
-    return vigilantes.filter(
-      (v) =>
-        (v.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.usuario?.correo || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [vigilantes, searchTerm]);
+    const term = searchTerm.toLowerCase();
+    let list = vigilantes.filter((v) => {
+      const matchSearch =
+        (v.nombre || '').toLowerCase().includes(term) ||
+        (v.turno || '').toLowerCase().includes(term) ||
+        (v.usuario?.correo || '').toLowerCase().includes(term);
+      const matchTurno = filterTurno === 'todos' || (v.turno || '').toLowerCase() === filterTurno;
+      return matchSearch && matchTurno;
+    });
+
+    list = [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === 'nombre') {
+        cmp = (a.nombre || '').localeCompare(b.nombre || '');
+      } else if (sortField === 'turno') {
+        cmp = (a.turno || '').localeCompare(b.turno || '');
+      } else if (sortField === 'fecha_alta') {
+        const da = a.fecha_alta || a.createdAt || '';
+        const db = b.fecha_alta || b.createdAt || '';
+        cmp = da.localeCompare(db);
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    return list;
+  }, [vigilantes, searchTerm, filterTurno, sortField, sortDir]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+
+    // Phone validation: must be exactly 10 digits if provided
+    if (formData.telefono && formData.telefono.length !== 10) {
+      setFormError('El teléfono debe tener exactamente 10 dígitos');
+      return;
+    }
+
+    // Duplicate email check
+    const emailLower = formData.email.toLowerCase();
+    const duplicate = vigilantes.find(
+      (v) =>
+        v.usuario?.correo?.toLowerCase() === emailLower &&
+        v.id_vigilante !== (editingVigilante?.id_vigilante ?? -1)
+    );
+    if (duplicate && !editingVigilante) {
+      setToastError('Ya existe un vigilante con ese correo electrónico');
+      return;
+    }
+
+    setSaving(true);
 
     try {
       if (editingVigilante) {
         await actualizarVigilante(editingVigilante.id_vigilante, {
           nombre: `${formData.nombre} ${formData.apellido}`.trim(),
           telefono: formData.telefono || undefined,
+          turno: formData.turno,
+          fecha_alta: new Date(formData.fechaAlta).toISOString(),
         });
       } else {
         // 1) Create user account
@@ -61,16 +137,30 @@ export default function VigilantesPage() {
           password: formData.password || 'vigilante123',
           rol: 'VIGILANTE',
         });
+
+        const newUserId = newUser?.usuario?.id_usuario || newUser?.id_usuario || newUser?.id;
+        if (!newUserId) {
+          setFormError('Error al crear usuario — no se obtuvo ID');
+          setSaving(false);
+          return;
+        }
+
         // 2) Create vigilante profile linked to the new user
         await agregarVigilante({
           nombre: `${formData.nombre} ${formData.apellido}`.trim(),
           telefono: formData.telefono || undefined,
-          id_usuario_fk: newUser?.usuario?.id_usuario || newUser?.id_usuario || newUser?.id,
+          turno: formData.turno,
+          fecha_alta: new Date(formData.fechaAlta).toISOString(),
+          id_usuario_fk: newUserId,
         });
       }
       closeModal();
     } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || 'Error al guardar vigilante';
+      setToastError(msg);
       console.error('Error guardando vigilante:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -84,6 +174,12 @@ export default function VigilantesPage() {
         email: vigilante.usuario?.correo || '',
         password: '',
         telefono: vigilante.telefono || '',
+        turno: vigilante.turno || 'matutino',
+        fechaAlta: vigilante.fecha_alta
+          ? new Date(vigilante.fecha_alta).toISOString().slice(0, 10)
+          : vigilante.createdAt
+            ? new Date(vigilante.createdAt).toISOString().slice(0, 10)
+            : todayISO,
       });
     } else {
       setEditingVigilante(null);
@@ -93,8 +189,11 @@ export default function VigilantesPage() {
         email: '',
         password: '',
         telefono: '',
+        turno: 'matutino',
+        fechaAlta: todayISO,
       });
     }
+    setFormError('');
     setShowModal(true);
   };
 
@@ -110,6 +209,12 @@ export default function VigilantesPage() {
     }
   };
 
+  const turnoLabel = (t?: string) => {
+    if (!t) return '-';
+    const map: Record<string, string> = { matutino: 'Matutino', vespertino: 'Vespertino', nocturno: 'Nocturno' };
+    return map[t.toLowerCase()] || t;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -120,20 +225,7 @@ export default function VigilantesPage() {
 
   return (
     <div className="min-h-screen bg-[#ececed] px-4 sm:px-6 py-6">
-      {/* ancho controlado para evitar “efecto zoom” */}
       <div className="mx-auto w-full max-w-[1440px]">
-        {/* Top-right */}
-        <div className="mb-4 flex justify-end">
-          <button
-            type="button"
-            className="rounded-2xl border border-red-400 bg-white px-6 py-3 text-[18px] font-semibold text-[#1e1e1e] hover:bg-red-50 transition"
-          >
-            <span className="inline-flex items-center gap-2">
-              <LogOut className="h-5 w-5 text-red-500" />
-              Cerrar sesión
-            </span>
-          </button>
-        </div>
 
         {/* Título */}
         <div className="mb-6">
@@ -152,7 +244,7 @@ export default function VigilantesPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar"
+                placeholder="Buscar por nombre o turno"
                 className="h-[56px] w-full rounded-2xl border-[4px] border-black bg-[#f7f7f7] pl-14 pr-4 text-[38px] sm:text-[22px] md:text-[20px] text-[#1e1e1e] placeholder:text-[#1e1e1e] outline-none focus:border-[#5d6bc7]"
               />
             </div>
@@ -179,16 +271,47 @@ export default function VigilantesPage() {
             className="h-[56px] rounded-2xl bg-[#5d6bc7] px-6 text-white inline-flex items-center gap-2 text-[38px] sm:text-[22px] md:text-[20px] font-medium hover:brightness-110 transition"
           >
             <Plus className="h-7 w-7" />
-            Nuevo Residente
+            Nuevo Vigilante
           </button>
         </div>
 
-        {/* Filtros opcionales */}
+        {/* Filtros desplegables */}
         {showFilters && (
-          <div className="mb-4 rounded-xl border border-[#cdd3ff] bg-white p-3">
-            <div className="text-sm text-slate-600 flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Puedes agregar aquí más filtros (turno / estado) si quieres.
+          <div className="mb-4 rounded-xl border border-[#cdd3ff] bg-white p-4 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">Turno:</span>
+              <select
+                value={filterTurno}
+                onChange={(e) => setFilterTurno(e.target.value)}
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+              >
+                <option value="todos">Todos</option>
+                <option value="matutino">Matutino</option>
+                <option value="vespertino">Vespertino</option>
+                <option value="nocturno">Nocturno</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-5 w-5 text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">Ordenar por:</span>
+              <select
+                value={`${sortField}-${sortDir}`}
+                onChange={(e) => {
+                  const [f, d] = e.target.value.split('-') as [SortField, SortDir];
+                  setSortField(f);
+                  setSortDir(d);
+                }}
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+              >
+                <option value="nombre-asc">Nombre A-Z</option>
+                <option value="nombre-desc">Nombre Z-A</option>
+                <option value="turno-asc">Turno A-Z</option>
+                <option value="turno-desc">Turno Z-A</option>
+                <option value="fecha_alta-asc">Fecha alta (antigua)</option>
+                <option value="fecha_alta-desc">Fecha alta (reciente)</option>
+              </select>
             </div>
           </div>
         )}
@@ -199,11 +322,26 @@ export default function VigilantesPage() {
             <table className="w-full min-w-[1120px] border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5d6bc7] text-white">
-                  <th className="px-8 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Nombre</th>
+                  <th
+                    className="px-8 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium cursor-pointer select-none"
+                    onClick={() => toggleSort('nombre')}
+                  >
+                    Nombre {sortField === 'nombre' && (sortDir === 'asc' ? '▲' : '▼')}
+                  </th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Teléfono</th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Email</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Fecha de alta</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Turno</th>
+                  <th
+                    className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium cursor-pointer select-none"
+                    onClick={() => toggleSort('fecha_alta')}
+                  >
+                    Fecha de alta {sortField === 'fecha_alta' && (sortDir === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th
+                    className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium cursor-pointer select-none"
+                    onClick={() => toggleSort('turno')}
+                  >
+                    Turno {sortField === 'turno' && (sortDir === 'asc' ? '▲' : '▼')}
+                  </th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Estado</th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Acciones</th>
                 </tr>
@@ -229,16 +367,32 @@ export default function VigilantesPage() {
                         {vigilante.usuario?.correo || '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {vigilante.createdAt ? formatearFecha(vigilante.createdAt) : '-'}
+                        {vigilante.fecha_alta
+                          ? formatearFecha(vigilante.fecha_alta)
+                          : vigilante.createdAt
+                            ? formatearFecha(vigilante.createdAt)
+                            : '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        -
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[15px] font-medium ${
+                          (vigilante.turno || '').toLowerCase() === 'matutino'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : (vigilante.turno || '').toLowerCase() === 'vespertino'
+                              ? 'bg-orange-100 text-orange-800'
+                              : (vigilante.turno || '').toLowerCase() === 'nocturno'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {turnoLabel(vigilante.turno)}
+                        </span>
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
                         <span
-                          className="inline-flex items-center rounded-2xl px-4 py-1.5 text-[17px] font-semibold text-white bg-[#8BC46A]"
+                          className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[17px] font-semibold text-white ${
+                            vigilante.usuario?.cuenta_bloq ? 'bg-[#ff5757]' : 'bg-[#8BC46A]'
+                          }`}
                         >
-                          Activo
+                          {vigilante.usuario?.cuenta_bloq ? 'Bloqueado' : 'Activo'}
                         </span>
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
@@ -281,8 +435,8 @@ export default function VigilantesPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 p-5">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 p-5 sticky top-0 bg-white rounded-t-2xl z-10">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingVigilante ? 'Editar Vigilante' : 'Nuevo Vigilante'}
               </h2>
@@ -294,7 +448,13 @@ export default function VigilantesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="off" className="p-5 space-y-4">
+              {formError && (
+                <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+
               <input
                 type="text"
                 value={formData.nombre}
@@ -318,6 +478,7 @@ export default function VigilantesPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Email"
+                autoComplete="new-email"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
                 required
               />
@@ -325,10 +486,40 @@ export default function VigilantesPage() {
               <input
                 type="tel"
                 value={formData.telefono}
-                onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                placeholder="Teléfono"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setFormData({ ...formData, telefono: val });
+                }}
+                placeholder="Teléfono (10 dígitos)"
+                maxLength={10}
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
               />
+
+              {/* Turno */}
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">Turno</label>
+                <select
+                  value={formData.turno}
+                  onChange={(e) => setFormData({ ...formData, turno: e.target.value })}
+                  className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+                  required
+                >
+                  <option value="matutino">Matutino</option>
+                  <option value="vespertino">Vespertino</option>
+                  <option value="nocturno">Nocturno</option>
+                </select>
+              </div>
+
+              {/* Fecha de alta */}
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">Fecha de alta</label>
+                <input
+                  type="date"
+                  value={formData.fechaAlta}
+                  onChange={(e) => setFormData({ ...formData, fechaAlta: e.target.value })}
+                  className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
+                />
+              </div>
 
               {!editingVigilante && (
                 <input
@@ -336,17 +527,28 @@ export default function VigilantesPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Contraseña (opcional)"
+                  autoComplete="new-password"
                   className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7]"
                 />
               )}
 
               <button
                 type="submit"
-                className="w-full h-11 rounded-lg bg-[#5d6bc7] text-white font-semibold hover:brightness-110 transition"
+                disabled={saving}
+                className="w-full h-11 rounded-lg bg-[#5d6bc7] text-white font-semibold hover:brightness-110 transition disabled:opacity-50"
               >
-                Guardar
+                {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating error toast */}
+      {toastError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+          <div className="bg-red-400 text-white px-10 py-5 rounded-2xl shadow-2xl text-lg font-semibold pointer-events-auto max-w-md text-center">
+            {toastError}
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 
@@ -9,73 +9,80 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const router = useRouter();
   const { login, session, fetchMe } = useStore();
+  const isLoggingIn = useRef(false);
 
   // Restore session from token on reload → redirect if already authenticated
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    if (token && !session.isAuthenticated) {
-      fetchMe();
-    }
+    const checkSession = async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (token && !session.isAuthenticated) {
+        try {
+          await fetchMe();
+        } catch {
+          // Token invalid, continue to login
+        }
+      }
+      setInitialCheckDone(true);
+    };
+    checkSession();
   }, []);
 
+  // Redirect when session is authenticated (after initial check or after login)
   useEffect(() => {
+    if (!initialCheckDone && !isLoggingIn.current) return;
     if (session.isAuthenticated && session.user?.rol) {
-      switch (session.user.rol) {
-        case 'admin': router.push('/admin'); break;
-        case 'vigilante': router.push('/vigilante'); break;
-        case 'residente': router.push('/residente'); break;
+      const routes: Record<string, string> = {
+        admin: '/admin',
+        vigilante: '/vigilante',
+        residente: '/residente',
+      };
+      const route = routes[session.user.rol];
+      if (route) {
+        router.push(route);
       }
     }
-  }, [session.isAuthenticated, session.user?.rol]);
-
-  const handleResetStorage = () => {
-    if (confirm('¿Deseas resetear los datos? Esto limpiará el localStorage y recargará la página.')) {
-      localStorage.clear();
-      window.location.reload();
-    }
-  };
+  }, [initialCheckDone, session.isAuthenticated, session.user?.rol]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    isLoggingIn.current = true;
 
     try {
       const user = await login(email, password);
 
       if (user) {
-        switch (user.rol) {
-          case 'admin':
-            router.push('/admin');
-            break;
-          case 'vigilante':
-            router.push('/vigilante');
-            break;
-          case 'residente':
-            router.push('/residente');
-            break;
+        const routes: Record<string, string> = {
+          admin: '/admin',
+          vigilante: '/vigilante',
+          residente: '/residente',
+        };
+        const route = routes[user.rol];
+        if (route) {
+          router.push(route);
+        } else {
+          setError('Rol de usuario no reconocido: ' + (user.rol || 'sin rol'));
         }
       } else {
         setError('USUARIO O CONTRASEÑA INCORRECTOS');
       }
-    } catch {
-      setError('Error de conexión con el servidor');
+    } catch (err: any) {
+      const msg = err?.message || 'Error de conexión con el servidor';
+      setError(msg);
     } finally {
       setLoading(false);
+      isLoggingIn.current = false;
     }
   };
 
-  // Datos de prueba para facilitar el login
-  const usuariosPrueba = [
-    { email: 'admin@condominio.com', password: 'admin123', rol: 'Administrador' },
-    { email: 'vigilante@condominio.com', password: 'vigilante123', rol: 'Vigilante' },
-    { email: 'residente@condominio.com', password: 'residente123', rol: 'Residente' },
-  ];
+   
 
   return (
-    <div className="min-h-screen bg-indigo-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Formulario de Login */}
         <div className="bg-indigo-600 rounded-3xl shadow-2xl p-8">
@@ -85,7 +92,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-6">
             <div>
               <input
                 id="email"
@@ -94,6 +101,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-6 py-4 bg-white rounded-2xl text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white text-lg"
                 placeholder="Correo electrónico"
+                autoComplete="username"
                 required
               />
             </div>
@@ -106,6 +114,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-6 py-4 bg-white rounded-2xl text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white text-lg"
                 placeholder="Contraseña"
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -129,27 +138,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Usuarios de Prueba */}
-        <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 p-6">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-white">👤 Usuarios de prueba:</h3>
-            <button
-              onClick={handleResetStorage}
-              className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition-colors"
-            >
-              Resetear Datos
-            </button>
-          </div>
-          <div className="space-y-2 text-xs">
-            {usuariosPrueba.map((usuario, index) => (
-              <div key={index} className="bg-white/20 p-3 rounded-lg border border-white/30">
-                <div className="font-semibold text-white">{usuario.rol}</div>
-                <div className="text-white">Email: {usuario.email}</div>
-                <div className="text-white">Password: {usuario.password}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+      
       </div>
 
       <style jsx global>{`

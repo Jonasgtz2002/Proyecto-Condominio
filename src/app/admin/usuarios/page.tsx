@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { Search, Filter, Plus, Edit2, Trash2, X, LogOut } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, Trash2, X } from 'lucide-react';
 import { ApiResidente } from '@/types';
 
 export default function UsuariosPage() {
@@ -11,6 +11,8 @@ export default function UsuariosPage() {
     fetchResidentes, fetchPagos, fetchEdificios, fetchDepartamentos,
     agregarResidente, actualizarResidente, eliminarResidente,
     agregarUsuario, agregarEdificio, agregarDepartamento,
+    agregarPago, actualizarPago,
+    agregarCajon,
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,17 @@ export default function UsuariosPage() {
   const [editingResidente, setEditingResidente] = useState<ApiResidente | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pagoWarning, setPagoWarning] = useState('');
+  const errorTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-dismiss error after 10 seconds
+  useEffect(() => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    if (error) {
+      errorTimerRef.current = setTimeout(() => setError(''), 10000);
+    }
+    return () => { if (errorTimerRef.current) clearTimeout(errorTimerRef.current); };
+  }, [error]);
 
   // Toggle: select existing or create new
   const [crearEdificio, setCrearEdificio] = useState(false);
@@ -41,6 +54,11 @@ export default function UsuariosPage() {
     nuevoEdificio: '',
     nuevoDireccion: '',
     nuevoDepartamento: '',
+    // Payment fields
+    estadoPago: 'pagado',
+    montoPago: '',
+    fechaInicio: '',
+    fechaProximoPago: '',
   });
 
   useEffect(() => {
@@ -54,8 +72,13 @@ export default function UsuariosPage() {
   }, []);
 
   const getEstadoPago = (residenteId: number): string => {
-    const pagoResidente = pagos.find((p) => p.id_residente_fk === residenteId);
-    return pagoResidente?.estatus || pagoResidente?.estado || 'pagado';
+    const pagoResidente = pagos.find((p) => Number(p.id_residente_fk) === Number(residenteId));
+    if (!pagoResidente) return 'sin_info';
+    return pagoResidente?.estatus || pagoResidente?.estado || 'pendiente';
+  };
+
+  const getPagoResidente = (residenteId: number) => {
+    return pagos.find((p) => Number(p.id_residente_fk) === Number(residenteId)) || null;
   };
 
   const filteredResidentes = useMemo(() => {
@@ -88,6 +111,13 @@ export default function UsuariosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Phone validation: must be exactly 10 digits if provided
+    if (formData.telefono && formData.telefono.length !== 10) {
+      setError('El teléfono debe tener exactamente 10 dígitos');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -111,6 +141,33 @@ export default function UsuariosPage() {
           id_edificio_fk: finalEdificioId,
           id_departamento_fk: finalDeptoId,
         });
+
+        // Update or create pago for this residente
+        try {
+          const freshPagos = useStore.getState().pagos;
+          const pagoExistente = freshPagos.find((p) => Number(p.id_residente_fk) === Number(editingResidente.id_residente));
+          const pagoData: any = {
+            monto: formData.estadoPago === 'pagado' ? 0 : (formData.montoPago ? Number(formData.montoPago) : 0),
+            estado: formData.estadoPago || 'pendiente',
+            estatus: formData.estadoPago || 'pendiente',
+            id_residente_fk: editingResidente.id_residente,
+          };
+          if (formData.fechaInicio) pagoData.fecha_ultimopago = formData.fechaInicio;
+          if (formData.fechaProximoPago) pagoData.fecha_vencimiento = formData.fechaProximoPago;
+
+          if (pagoData.fecha_ultimopago) pagoData.fecha_ultimopago = new Date(pagoData.fecha_ultimopago).toISOString();
+          if (pagoData.fecha_vencimiento) pagoData.fecha_vencimiento = new Date(pagoData.fecha_vencimiento).toISOString();
+          console.log('[EDIT] Pago existente:', pagoExistente, 'Datos a enviar:', JSON.stringify(pagoData));
+
+          if (pagoExistente) {
+            await actualizarPago(pagoExistente.id_pago, pagoData);
+          } else {
+            await agregarPago(pagoData);
+          }
+        } catch (pagoErr: any) {
+          console.error('[EDIT] Error guardando pago:', pagoErr?.response?.data || pagoErr);
+          // Don't block — resident was saved successfully
+        }
       } else {
         // ── Create mode ──
 
@@ -152,6 +209,20 @@ export default function UsuariosPage() {
 
         // Validate that edificio and departamento were resolved
         if (!finalEdificioId || !finalDeptoId) {
+          // Re-fetch from store in case the data was just created
+          const freshEdificios = useStore.getState().edificios;
+          const freshDepartamentos = useStore.getState().departamentos;
+          if (!finalEdificioId && crearEdificio) {
+            const found = freshEdificios.find((e) => e.num_edificio === formData.nuevoEdificio.trim());
+            finalEdificioId = found?.id_edificio;
+          }
+          if (!finalDeptoId && crearDepartamento && finalEdificioId) {
+            const found = freshDepartamentos.find((d) => d.id_edificio_fk === finalEdificioId);
+            finalDeptoId = found?.id_departamento;
+          }
+        }
+
+        if (!finalEdificioId || !finalDeptoId) {
           setError('Debes seleccionar o crear un edificio y un departamento');
           setSaving(false);
           return;
@@ -180,7 +251,57 @@ export default function UsuariosPage() {
           id_departamento_fk: finalDeptoId,
           matricula: formData.matricula.trim() || undefined,
         });
+
+        // 5) Find the newly created residente from the refreshed store
+        const freshResidentes = useStore.getState().residentes;
+        const createdResidente = freshResidentes.find(
+          (r) => Number(r.id_usuario_fk) === Number(newUserId)
+        );
+        const newResidenteId = createdResidente?.id_residente;
+        console.log('Nuevo residente creado, id_residente:', newResidenteId, 'id_usuario_fk:', newUserId);
+
+        // 6) Create pago record
+        if (newResidenteId) {
+          try {
+            const pagoData: any = {
+              monto: formData.estadoPago === 'pagado' ? 0 : (formData.montoPago ? Number(formData.montoPago) : 0),
+              estado: formData.estadoPago || 'pendiente',
+              estatus: formData.estadoPago || 'pendiente',
+              id_residente_fk: newResidenteId,
+            };
+            if (formData.fechaInicio) pagoData.fecha_ultimopago = formData.fechaInicio;
+            if (formData.fechaProximoPago) pagoData.fecha_vencimiento = formData.fechaProximoPago;
+            if (pagoData.fecha_ultimopago) pagoData.fecha_ultimopago = new Date(pagoData.fecha_ultimopago).toISOString();
+            if (pagoData.fecha_vencimiento) pagoData.fecha_vencimiento = new Date(pagoData.fecha_vencimiento).toISOString();
+            console.log('[CREATE] Creando pago con datos:', JSON.stringify(pagoData));
+            await agregarPago(pagoData);
+          } catch (pagoErr: any) {
+            console.error('[CREATE] Error creando pago:', pagoErr?.response?.data || pagoErr);
+            // Don't block — resident was saved successfully
+          }
+        } else {
+          console.warn('[CREATE] No se encontró id_residente después de crear. userId:', newUserId);
+        }
+
+        // 7) Create parking spot (cajón de estacionamiento)
+        if (finalDeptoId) {
+          try {
+            const freshEdificios = useStore.getState().edificios;
+            const edObj = freshEdificios.find((e) => e.id_edificio === finalEdificioId);
+            const edNombre = edObj?.num_edificio || `Ed.${finalEdificioId}`;
+            const cajonNombre = `${edNombre} - Depto #${finalDeptoId}`;
+            await agregarCajon({
+              estado: cajonNombre,
+              id_departamento_fk: finalDeptoId,
+            });
+            console.log('[CREATE] Cajón creado:', cajonNombre);
+          } catch (cajonErr: any) {
+            console.error('[CREATE] Error creando cajón:', cajonErr?.response?.data || cajonErr);
+          }
+        }
       }
+      // Always refresh pagos after save
+      await fetchPagos();
       closeModal();
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.response?.data?.error || 'Error al guardar');
@@ -193,6 +314,7 @@ export default function UsuariosPage() {
     if (residente) {
       setEditingResidente(residente);
       const nameParts = (residente.nombre || '').split(' ');
+      const pagoExistente = pagos.find((p) => Number(p.id_residente_fk) === Number(residente.id_residente));
       setFormData({
         nombre: nameParts[0] || '',
         apellido: nameParts.slice(1).join(' ') || '',
@@ -205,6 +327,10 @@ export default function UsuariosPage() {
         nuevoEdificio: '',
         nuevoDireccion: '',
         nuevoDepartamento: '',
+        estadoPago: pagoExistente?.estatus || pagoExistente?.estado || 'pagado',
+        montoPago: pagoExistente?.monto != null ? String(pagoExistente.monto) : '',
+        fechaInicio: pagoExistente?.fecha_ultimopago ? pagoExistente.fecha_ultimopago.split('T')[0] : '',
+        fechaProximoPago: pagoExistente?.fecha_vencimiento ? pagoExistente.fecha_vencimiento.split('T')[0] : '',
       });
     } else {
       setEditingResidente(null);
@@ -220,6 +346,10 @@ export default function UsuariosPage() {
         nuevoEdificio: '',
         nuevoDireccion: '',
         nuevoDepartamento: '',
+        estadoPago: 'pagado',
+        montoPago: '',
+        fechaInicio: '',
+        fechaProximoPago: '',
       });
     }
     setCrearEdificio(false);
@@ -256,16 +386,6 @@ export default function UsuariosPage() {
     <div className="min-h-screen bg-[#eeeeef] px-4 sm:px-6 py-6">
       {/* Contenedor principal SIN zoom visual */}
       <div className="mx-auto w-full max-w-[1440px]">
-        {/* Top right */}
-        <div className="flex justify-end mb-4">
-          <button
-            className="inline-flex items-center gap-2 rounded-2xl border border-red-400 bg-white px-5 py-2.5 text-[18px] font-semibold text-[#1f1f1f] hover:bg-red-50 transition"
-            type="button"
-          >
-            <LogOut className="h-5 w-5 text-red-500" />
-            Cerrar sesión
-          </button>
-        </div>
 
         {/* Título */}
         <div className="mb-6">
@@ -351,7 +471,7 @@ export default function UsuariosPage() {
         {/* Tabla estilo referencia */}
         <div className="rounded-2xl border border-[#8b8b8b] overflow-hidden bg-white/40">
           <div className="max-h-[500px] overflow-auto">
-            <table className="w-full min-w-[980px] border-separate border-spacing-0">
+            <table className="w-full min-w-[1200px] border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5f6ec9] text-white">
                   <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-8 py-5">Nombre</th>
@@ -359,6 +479,8 @@ export default function UsuariosPage() {
                   <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Departamento</th>
                   <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Email</th>
                   <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Teléfono</th>
+                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Monto</th>
+                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Próx. pago</th>
                   <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Estatus</th>
                   <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Acciones</th>
                 </tr>
@@ -367,13 +489,14 @@ export default function UsuariosPage() {
               <tbody>
                 {filteredResidentes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-10 text-center text-slate-600 text-lg">
+                    <td colSpan={9} className="px-6 py-10 text-center text-slate-600 text-lg">
                       No hay residentes para mostrar
                     </td>
                   </tr>
                 ) : (
                   filteredResidentes.map((residente) => {
                     const estadoPago = getEstadoPago(residente.id_residente);
+                    const pago = getPagoResidente(residente.id_residente);
 
                     return (
                       <tr key={residente.id_residente} className="bg-[#f2f2f3]">
@@ -392,15 +515,25 @@ export default function UsuariosPage() {
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
                           {residente.telefono || '-'}
                         </td>
+                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                          {pago ? `$${Number(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                          {pago?.fecha_vencimiento
+                            ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-MX')
+                            : '-'}
+                        </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2]">
                           <span
                             className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[20px] sm:text-[16px] font-semibold ${
                               estadoPago === 'pagado'
                                 ? 'bg-[#8BC46A] text-white'
+                                : estadoPago === 'sin_info'
+                                ? 'bg-gray-400 text-white'
                                 : 'bg-[#ff5757] text-white'
                             }`}
                           >
-                            {estadoPago === 'pagado' ? 'Pagado' : 'Vencido'}
+                            {estadoPago === 'pagado' ? 'Pagado' : estadoPago === 'sin_info' ? 'Sin info' : 'Pago Vencido'}
                           </span>
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2]">
@@ -444,7 +577,7 @@ export default function UsuariosPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-slate-200">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingResidente ? 'Editar Residente' : 'Nuevo Residente'}
@@ -457,12 +590,7 @@ export default function UsuariosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              {error && (
-                <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+            <form onSubmit={handleSubmit} autoComplete="off" className="p-5 space-y-4">
 
               <input
                 type="text"
@@ -487,6 +615,7 @@ export default function UsuariosPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Email"
+                autoComplete="new-email"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
                 required
               />
@@ -494,8 +623,12 @@ export default function UsuariosPage() {
               <input
                 type="tel"
                 value={formData.telefono}
-                onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                placeholder="Teléfono"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setFormData({ ...formData, telefono: val });
+                }}
+                placeholder="Teléfono (10 dígitos)"
+                maxLength={10}
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
               />
 
@@ -582,9 +715,8 @@ export default function UsuariosPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, matricula: e.target.value.toUpperCase() })
                 }
-                placeholder="Matrícula"
+                placeholder="Matrícula (opcional)"
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
-                required
               />
 
               {!editingResidente && (
@@ -593,9 +725,62 @@ export default function UsuariosPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Contraseña (opcional)"
+                  autoComplete="new-password"
                   className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
                 />
               )}
+
+              {/* ── Payment fields ── */}
+              <div className="border-t border-slate-200 pt-4 space-y-3">
+                <label className="text-sm font-semibold text-slate-700">Información de pago</label>
+
+                <select
+                  value={formData.estadoPago}
+                  onChange={(e) => {
+                    const newEstado = e.target.value;
+                    setFormData({
+                      ...formData,
+                      estadoPago: newEstado,
+                      montoPago: newEstado === 'pagado' ? '0' : formData.montoPago,
+                    });
+                  }}
+                  className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                >
+                  <option value="pagado">Pagado</option>
+                  <option value="vencido">Pago Vencido</option>
+                </select>
+
+                <input
+                  type="number"
+                  value={formData.estadoPago === 'pagado' ? '0' : formData.montoPago}
+                  onChange={(e) => setFormData({ ...formData, montoPago: e.target.value })}
+                  placeholder="Monto de deuda ($)"
+                  min="0"
+                  step="0.01"
+                  disabled={formData.estadoPago === 'pagado'}
+                  className={`w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9] ${formData.estadoPago === 'pagado' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`}
+                />
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Fecha de inicio / último pago</label>
+                  <input
+                    type="date"
+                    value={formData.fechaInicio}
+                    onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                    className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">Fecha de próximo pago</label>
+                  <input
+                    type="date"
+                    value={formData.fechaProximoPago}
+                    onChange={(e) => setFormData({ ...formData, fechaProximoPago: e.target.value })}
+                    className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                  />
+                </div>
+              </div>
 
               <button
                 type="submit"
@@ -605,6 +790,15 @@ export default function UsuariosPage() {
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating error toast */}
+      {error && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+          <div className="bg-red-400 text-white px-10 py-5 rounded-2xl shadow-2xl text-lg font-semibold pointer-events-auto max-w-md text-center">
+            {error}
           </div>
         </div>
       )}

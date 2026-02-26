@@ -82,7 +82,7 @@ interface AppState {
   fetchUsuarios: () => Promise<void>;
 
   // ── CRUD Residentes ──
-  agregarResidente: (data: any) => Promise<void>;
+  agregarResidente: (data: any) => Promise<any>;
   actualizarResidente: (id: number, data: any) => Promise<void>;
   eliminarResidente: (id: number) => Promise<void>;
 
@@ -143,7 +143,22 @@ interface AppState {
 
 export const useStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      // Helper: extract array from API response (handles { data: [...] } or [...] or { pagos: [...] } etc.)
+      const extractArray = (data: any): any[] => {
+        if (Array.isArray(data)) return data;
+        if (data?.data && Array.isArray(data.data)) return data.data;
+        // Check for any property that is an array (e.g. { pagos: [...] }, { residentes: [...] })
+        if (data && typeof data === 'object') {
+          const keys = Object.keys(data);
+          for (const key of keys) {
+            if (Array.isArray(data[key])) return data[key];
+          }
+        }
+        return [];
+      };
+
+      return ({
       // ────────────── Session ──────────────
       session: {
         user: null,
@@ -156,7 +171,16 @@ export const useStore = create<AppState>()(
       login: async (correo: string, password: string) => {
         try {
           const res = await authService.login({ correo, password });
-          const { token, usuario } = res.data;
+          // Handle different API response structures
+          const responseData = res.data?.data || res.data;
+          const token = responseData?.token;
+          const usuario = responseData?.usuario || responseData?.user;
+
+          if (!token || !usuario) {
+            console.error('Invalid login response structure:', res.data);
+            return null;
+          }
+
           // Normalize role: ADMINISTRADOR -> admin, VIGILANTE -> vigilante, RESIDENTE -> residente
           const rolMap: Record<string, string> = {
             ADMINISTRADOR: 'admin',
@@ -168,6 +192,8 @@ export const useStore = create<AppState>()(
             rol: rolMap[usuario.rol?.toUpperCase()] || usuario.rol?.toLowerCase() || usuario.rol,
           };
 
+          const userId = user.id_usuario || user.id;
+
           // Store token
           if (typeof window !== 'undefined') {
             localStorage.setItem('auth_token', token);
@@ -177,14 +203,14 @@ export const useStore = create<AppState>()(
           let profile: any = null;
           try {
             if (user.rol === 'residente') {
-              const profileRes = await residentesService.getByUsuario(user.id);
-              profile = profileRes.data;
+              const profileRes = await residentesService.getByUsuario(userId);
+              profile = profileRes.data?.data || profileRes.data;
             } else if (user.rol === 'vigilante') {
-              const profileRes = await vigilantesService.getByUsuario(user.id);
-              profile = profileRes.data;
+              const profileRes = await vigilantesService.getByUsuario(userId);
+              profile = profileRes.data?.data || profileRes.data;
             } else if (user.rol === 'admin') {
-              const profileRes = await administradoresService.getByUsuario(user.id);
-              profile = profileRes.data;
+              const profileRes = await administradoresService.getByUsuario(userId);
+              profile = profileRes.data?.data || profileRes.data;
             }
           } catch (profileError) {
             // Profile fetch may fail, continue with basic user info
@@ -194,7 +220,7 @@ export const useStore = create<AppState>()(
           const sessionUser = {
             ...user,
             ...(profile || {}),
-            apiUserId: user.id,
+            apiUserId: userId,
           };
 
           set({
@@ -207,8 +233,13 @@ export const useStore = create<AppState>()(
 
           return sessionUser;
         } catch (error: any) {
-          console.error('Login error:', error);
-          return null;
+          console.error('Login error:', error?.response?.data || error);
+          // Build a meaningful error message
+          const apiMsg = error?.response?.data?.message || error?.response?.data?.error;
+          if (apiMsg) {
+            throw new Error(apiMsg);
+          }
+          throw error;
         }
       },
 
@@ -240,7 +271,12 @@ export const useStore = create<AppState>()(
       fetchMe: async () => {
         try {
           const res = await authService.me();
-          const rawUser = res.data;
+          const rawUser = res.data?.data || res.data;
+
+          if (!rawUser || (!rawUser.rol && !rawUser.role)) {
+            throw new Error('Invalid user data from /auth/me');
+          }
+
           const rolMap: Record<string, string> = {
             ADMINISTRADOR: 'admin',
             VIGILANTE: 'vigilante',
@@ -251,17 +287,19 @@ export const useStore = create<AppState>()(
             rol: rolMap[rawUser.rol?.toUpperCase()] || rawUser.rol?.toLowerCase() || rawUser.rol,
           };
 
+          const userId = user.id_usuario || user.id;
+
           let profile: any = null;
           try {
             if (user.rol === 'residente') {
-              const profileRes = await residentesService.getByUsuario(user.id);
-              profile = profileRes.data;
+              const profileRes = await residentesService.getByUsuario(userId);
+              profile = profileRes.data?.data || profileRes.data;
             } else if (user.rol === 'vigilante') {
-              const profileRes = await vigilantesService.getByUsuario(user.id);
-              profile = profileRes.data;
+              const profileRes = await vigilantesService.getByUsuario(userId);
+              profile = profileRes.data?.data || profileRes.data;
             } else if (user.rol === 'admin') {
-              const profileRes = await administradoresService.getByUsuario(user.id);
-              profile = profileRes.data;
+              const profileRes = await administradoresService.getByUsuario(userId);
+              profile = profileRes.data?.data || profileRes.data;
             }
           } catch {
             // Profile fetch may fail
@@ -270,7 +308,7 @@ export const useStore = create<AppState>()(
           const sessionUser = {
             ...user,
             ...(profile || {}),
-            apiUserId: user.id,
+            apiUserId: userId,
           };
 
           set({
@@ -281,6 +319,9 @@ export const useStore = create<AppState>()(
             },
           });
         } catch {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+          }
           set({
             session: { user: null, token: null, isAuthenticated: false },
           });
@@ -320,84 +361,84 @@ export const useStore = create<AppState>()(
       fetchResidentes: async () => {
         try {
           const res = await residentesService.getAll();
-          set({ residentes: Array.isArray(res.data) ? res.data : [] });
+          set({ residentes: extractArray(res.data) });
         } catch (e) { console.error('Error fetching residentes:', e); }
       },
 
       fetchVigilantes: async () => {
         try {
           const res = await vigilantesService.getAll();
-          set({ vigilantes: Array.isArray(res.data) ? res.data : [] });
+          set({ vigilantes: extractArray(res.data) });
         } catch (e) { console.error('Error fetching vigilantes:', e); }
       },
 
       fetchAdministradores: async () => {
         try {
           const res = await administradoresService.getAll();
-          set({ administradores: Array.isArray(res.data) ? res.data : [] });
+          set({ administradores: extractArray(res.data) });
         } catch (e) { console.error('Error fetching administradores:', e); }
       },
 
       fetchEdificios: async () => {
         try {
           const res = await edificiosService.getAll();
-          set({ edificios: Array.isArray(res.data) ? res.data : [] });
+          set({ edificios: extractArray(res.data) });
         } catch (e) { console.error('Error fetching edificios:', e); }
       },
 
       fetchDepartamentos: async () => {
         try {
           const res = await departamentosService.getAll();
-          set({ departamentos: Array.isArray(res.data) ? res.data : [] });
+          set({ departamentos: extractArray(res.data) });
         } catch (e) { console.error('Error fetching departamentos:', e); }
       },
 
       fetchVisitantes: async () => {
         try {
           const res = await visitantesService.getAll();
-          set({ visitantes: Array.isArray(res.data) ? res.data : [] });
+          set({ visitantes: extractArray(res.data) });
         } catch (e) { console.error('Error fetching visitantes:', e); }
       },
 
       fetchVisitantesActivos: async () => {
         try {
           const res = await visitantesService.getActivos();
-          set({ visitantesActivos: Array.isArray(res.data) ? res.data : [] });
+          set({ visitantesActivos: extractArray(res.data) });
         } catch (e) { console.error('Error fetching visitantes activos:', e); }
       },
 
       fetchCajones: async () => {
         try {
           const res = await cajonesService.getAll();
-          set({ cajones: Array.isArray(res.data) ? res.data : [] });
+          set({ cajones: extractArray(res.data) });
         } catch (e) { console.error('Error fetching cajones:', e); }
       },
 
       fetchMatriculas: async () => {
         try {
           const res = await matriculasService.getAll();
-          set({ matriculas: Array.isArray(res.data) ? res.data : [] });
+          set({ matriculas: extractArray(res.data) });
         } catch (e) { console.error('Error fetching matriculas:', e); }
       },
 
       fetchAccesos: async () => {
         try {
           const res = await accesosService.getAll();
-          set({ accesos: Array.isArray(res.data) ? res.data : [] });
+          set({ accesos: extractArray(res.data) });
         } catch (e) { console.error('Error fetching accesos:', e); }
       },
 
       fetchAccesosActivos: async () => {
         try {
           const res = await accesosService.getActivos();
-          set({ accesosHoy: Array.isArray(res.data) ? res.data : [] });
+          set({ accesosHoy: extractArray(res.data) });
         } catch (e) { console.error('Error fetching accesos activos:', e); }
       },
 
       fetchAccesosPorResidente: async (residenteId: number) => {
         try {
           const res = await accesosService.getByResidente(residenteId);
-          return Array.isArray(res.data) ? res.data : [];
+          return extractArray(res.data);
         } catch (e) {
           console.error('Error fetching accesos por residente:', e);
           return [];
@@ -407,28 +448,30 @@ export const useStore = create<AppState>()(
       fetchPagos: async () => {
         try {
           const res = await pagosService.getAll();
-          set({ pagos: Array.isArray(res.data) ? res.data : [] });
+          const parsed = extractArray(res.data);
+          console.log('[fetchPagos] raw res.data:', res.data, '| parsed:', parsed);
+          set({ pagos: parsed });
         } catch (e) { console.error('Error fetching pagos:', e); }
       },
 
       fetchPagosPendientes: async () => {
         try {
           const res = await pagosService.getPendientes();
-          set({ pagosPendientes: Array.isArray(res.data) ? res.data : [] });
+          set({ pagosPendientes: extractArray(res.data) });
         } catch (e) { console.error('Error fetching pagos pendientes:', e); }
       },
 
       fetchPagosVencidos: async () => {
         try {
           const res = await pagosService.getVencidos();
-          set({ pagosVencidos: Array.isArray(res.data) ? res.data : [] });
+          set({ pagosVencidos: extractArray(res.data) });
         } catch (e) { console.error('Error fetching pagos vencidos:', e); }
       },
 
       fetchPagosPorResidente: async (residenteId: number) => {
         try {
           const res = await pagosService.getByResidente(residenteId);
-          return Array.isArray(res.data) ? res.data : [];
+          return extractArray(res.data);
         } catch (e) {
           console.error('Error fetching pagos por residente:', e);
           return [];
@@ -438,22 +481,23 @@ export const useStore = create<AppState>()(
       fetchAnuncios: async () => {
         try {
           const res = await anunciosService.getAll();
-          set({ anuncios: Array.isArray(res.data) ? res.data : [] });
+          set({ anuncios: extractArray(res.data) });
         } catch (e) { console.error('Error fetching anuncios:', e); }
       },
 
       fetchUsuarios: async () => {
         try {
           const res = await usersService.getAll();
-          set({ usuarios: Array.isArray(res.data) ? res.data : [] });
+          set({ usuarios: extractArray(res.data) });
         } catch (e) { console.error('Error fetching usuarios:', e); }
       },
 
       // ────────────── CRUD Residentes ──────────────
       agregarResidente: async (data) => {
         try {
-          await residentesService.create(data);
+          const res = await residentesService.create(data);
           await get().fetchResidentes();
+          return res?.data?.data || res?.data;
         } catch (e) { console.error('Error creating residente:', e); throw e; }
       },
 
@@ -466,8 +510,35 @@ export const useStore = create<AppState>()(
 
       eliminarResidente: async (id) => {
         try {
+          // Find the residente to get the associated user ID before deleting
+          const residente = get().residentes.find(r => r.id_residente === id);
+          const userId = residente?.id_usuario_fk;
+
+          // Delete associated pago records first (FK constraint)
+          const pagosResidente = get().pagos.filter(p => Number(p.id_residente_fk) === Number(id));
+          for (const pago of pagosResidente) {
+            try {
+              await pagosService.delete(pago.id_pago);
+            } catch (pagoErr) {
+              console.warn('Could not delete pago:', pago.id_pago, pagoErr);
+            }
+          }
+
           await residentesService.delete(id);
           await get().fetchResidentes();
+          await get().fetchPagos();
+
+          // Also delete the associated user account
+          if (userId) {
+            try {
+              await usersService.delete(userId);
+              if (get().usuarios.length > 0) {
+                await get().fetchUsuarios();
+              }
+            } catch (userErr) {
+              console.warn('Could not delete associated user account:', userErr);
+            }
+          }
         } catch (e) { console.error('Error deleting residente:', e); throw e; }
       },
 
@@ -488,8 +559,25 @@ export const useStore = create<AppState>()(
 
       eliminarVigilante: async (id) => {
         try {
+          // Find the vigilante to get the associated user ID before deleting
+          const vigilante = get().vigilantes.find(v => v.id_vigilante === id);
+          const userId = vigilante?.id_usuario_fk;
+
           await vigilantesService.delete(id);
           await get().fetchVigilantes();
+
+          // Also delete the associated user account
+          if (userId) {
+            try {
+              await usersService.delete(userId);
+              // Refresh usuarios list if it's loaded
+              if (get().usuarios.length > 0) {
+                await get().fetchUsuarios();
+              }
+            } catch (userErr) {
+              console.warn('Could not delete associated user account:', userErr);
+            }
+          }
         } catch (e) { console.error('Error deleting vigilante:', e); throw e; }
       },
 
@@ -539,16 +627,26 @@ export const useStore = create<AppState>()(
       // ────────────── CRUD Pagos ──────────────
       agregarPago: async (data) => {
         try {
-          await pagosService.create(data);
+          console.log('[agregarPago] enviando datos:', JSON.stringify(data));
+          const res = await pagosService.create(data);
+          console.log('[agregarPago] respuesta API:', res.data);
           await get().fetchPagos();
-        } catch (e) { console.error('Error creating pago:', e); throw e; }
+        } catch (e: any) {
+          console.error('Error creating pago:', e?.response?.data || e);
+          throw e;
+        }
       },
 
       actualizarPago: async (id, data) => {
         try {
-          await pagosService.update(id, data);
+          console.log('[actualizarPago] id:', id, 'datos:', JSON.stringify(data));
+          const res = await pagosService.update(id, data);
+          console.log('[actualizarPago] respuesta API:', res.data);
           await get().fetchPagos();
-        } catch (e) { console.error('Error updating pago:', e); throw e; }
+        } catch (e: any) {
+          console.error('Error updating pago:', e?.response?.data || e);
+          throw e;
+        }
       },
 
       eliminarPago: async (id) => {
@@ -713,7 +811,8 @@ export const useStore = create<AppState>()(
           (m) => m.matricula?.toUpperCase() === matricula.toUpperCase()
         );
       },
-    }),
+    });
+    },
     {
       name: 'condominio-session',
       partialize: (state) => ({

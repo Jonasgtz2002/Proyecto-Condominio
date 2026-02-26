@@ -134,6 +134,8 @@ export interface ApiVigilante {
   id_vigilante: number;
   nombre: string;
   telefono?: string;
+  turno?: string;
+  fecha_alta?: string;
   id_usuario_fk?: number;
   usuario?: ApiUser;
   createdAt?: string;
