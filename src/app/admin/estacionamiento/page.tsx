@@ -17,9 +17,6 @@ export default function EstacionamientoPage() {
   }, []);
 
   const getLabel = (espacio: typeof cajones[number]) => {
-    if (espacio.estado && espacio.estado !== 'ocupado' && espacio.estado !== 'disponible') {
-      return espacio.estado;
-    }
     const edif = espacio.departamento?.edificio?.num_edificio || '';
     const depto = espacio.departamento?.id_departamento || espacio.id_departamento_fk || '';
     if (edif || depto) return `${edif} - Depto #${depto}`;

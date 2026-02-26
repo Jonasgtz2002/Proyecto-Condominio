@@ -35,7 +35,7 @@ export default function LoginPage() {
     if (!initialCheckDone && !isLoggingIn.current) return;
     if (session.isAuthenticated && session.user?.rol) {
       const routes: Record<string, string> = {
-        admin: '/admin',
+        admin: '/admin/usuarios',
         vigilante: '/vigilante',
         residente: '/residente',
       };

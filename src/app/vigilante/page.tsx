@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import {
   Search,
@@ -8,6 +8,8 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { ApiMatricula } from '@/types';
 import { vigilantesService } from '@/services/vigilantes.service';
@@ -17,13 +19,17 @@ export default function VigilantePage() {
     accesosHoy,
     fetchAccesosActivos,
     registrarAcceso,
+    registrarSalidaAcceso,
     buscarMatriculaEnAPI,
+    actualizarCajon,
+    cajones,
+    fetchCajones,
     session,
   } = useStore();
 
   const [matricula, setMatricula] = useState('');
   const [resultado, setResultado] = useState<
-    'loading' | 'found' | 'not-found' | 'granted' | 'denied' | 'error' | null
+    'loading' | 'found' | 'not-found' | 'granted' | 'exit-registered' | 'denied' | 'error' | null
   >(null);
   const [matriculaData, setMatriculaData] = useState<ApiMatricula | null>(null);
   const [grantLoading, setGrantLoading] = useState(false);
@@ -32,16 +38,12 @@ export default function VigilantePage() {
   const [vigilanteId, setVigilanteId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Resolve vigilante ID on mount
     const resolveVigilanteId = async () => {
-      // 1. Try from session
       const fromSession = session.user?.id_vigilante;
       if (fromSession) {
         setVigilanteId(Number(fromSession));
         return;
       }
-
-      // 2. Try fetching from API using the user's id
       const userId = session.user?.apiUserId || session.user?.id || session.user?.id_usuario;
       if (userId) {
         try {
@@ -58,8 +60,29 @@ export default function VigilantePage() {
     };
 
     resolveVigilanteId();
-    fetchAccesosActivos().finally(() => setLoadingAccesos(false));
+    Promise.all([fetchAccesosActivos(), fetchCajones()]).finally(() => setLoadingAccesos(false));
   }, []);
+
+  // Determine if the searched matrícula is currently inside
+  const accesoActivo = useMemo(() => {
+    if (!matriculaData) return null;
+    return accesosHoy.find(
+      (a) => a.matricula_fk === matriculaData.matricula && !a.hora_salida
+    ) || null;
+  }, [accesosHoy, matriculaData]);
+
+  const estaAdentro = !!accesoActivo;
+
+  // Find the cajón linked to the resident's departamento
+  const cajonResidente = useMemo(() => {
+    const deptoId = matriculaData?.residente?.id_departamento_fk || matriculaData?.residente?.departamento?.id_departamento;
+    if (!deptoId) return null;
+    return cajones.find((c) => c.id_departamento_fk === deptoId) || null;
+  }, [matriculaData, cajones]);
+
+  // Determine button mode based on cajón estado
+  const cajonDisponible = cajonResidente?.estado?.toLowerCase() === 'disponible';
+  const cajonOcupado = cajonResidente?.estado?.toLowerCase() === 'ocupado';
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +93,9 @@ export default function VigilantePage() {
     setMatriculaData(null);
     setErrorMsg('');
 
+    // Refresh active accesos so entry/exit status is up to date
+    await fetchAccesosActivos();
+
     const found = await buscarMatriculaEnAPI(val);
     if (found) {
       setMatriculaData(found);
@@ -77,6 +103,13 @@ export default function VigilantePage() {
     } else {
       setResultado('not-found');
     }
+  };
+
+  // Find cajón for the residente's departamento
+  const findCajon = () => {
+    const deptoId = matriculaData?.residente?.id_departamento_fk || matriculaData?.residente?.departamento?.id_departamento;
+    if (!deptoId) return null;
+    return cajones.find((c) => c.id_departamento_fk === deptoId) || null;
   };
 
   const handleGrantAccess = async () => {
@@ -96,11 +129,44 @@ export default function VigilantePage() {
         matricula_fk: matriculaData.matricula,
         id_vigilante_fk: vigilanteId,
       });
+
+      // Update cajón to ocupado
+      const cajon = findCajon();
+      if (cajon) {
+        try { await actualizarCajon(cajon.id_cajon, { estado: 'ocupado' }); } catch { }
+      }
+
       setResultado('granted');
-      // Refresh the active accesos table
-      await fetchAccesosActivos();
+      await Promise.all([fetchAccesosActivos(), fetchCajones()]);
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.message || 'Error al registrar acceso';
+      setErrorMsg(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      setResultado('error');
+    } finally {
+      setGrantLoading(false);
+    }
+  };
+
+  const handleRegisterExit = async () => {
+    setGrantLoading(true);
+    setErrorMsg('');
+
+    try {
+      // Register exit in accesos if there is an active record
+      if (accesoActivo) {
+        await registrarSalidaAcceso(accesoActivo.id_accesos);
+      }
+
+      // Update cajón to disponible
+      const cajon = findCajon();
+      if (cajon) {
+        try { await actualizarCajon(cajon.id_cajon, { estado: 'disponible' }); } catch { }
+      }
+
+      setResultado('exit-registered');
+      await Promise.all([fetchAccesosActivos(), fetchCajones()]);
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Error al registrar salida';
       setErrorMsg(typeof msg === 'string' ? msg : JSON.stringify(msg));
       setResultado('error');
     } finally {
@@ -230,27 +296,67 @@ export default function VigilantePage() {
                   )}
                 </div>
 
+                {/* Cajón status indicator */}
+                {cajonResidente ? (
+                  <div className={`rounded-lg px-4 py-2 text-center font-bold text-lg ${cajonOcupado
+                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                    : cajonDisponible
+                      ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                      : 'bg-gray-100 text-gray-700 border border-gray-300'
+                    }`}>
+                    {cajonOcupado
+                      ? `⚠ Cajón #${cajonResidente.id_cajon} — OCUPADO (vehículo dentro)`
+                      : cajonDisponible
+                        ? `Cajón #${cajonResidente.id_cajon} — DISPONIBLE`
+                        : `Cajón #${cajonResidente.id_cajon} — ${cajonResidente.estado || 'Sin estado'}`}
+                  </div>
+                ) : (
+                  <div className="rounded-lg px-4 py-2 text-center font-bold text-lg bg-gray-100 text-gray-600 border border-gray-300">
+                    ⚠ No se encontró un cajón vinculado a este residente
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    onClick={handleGrantAccess}
-                    disabled={grantLoading}
-                    className="rounded-lg bg-green-600 hover:bg-green-700 text-white py-2.5 font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2"
-                  >
-                    {grantLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Registrando...
-                      </>
-                    ) : (
-                      'Otorgar acceso'
-                    )}
-                  </button>
-                  <button
-                    onClick={handleDenyAccess}
-                    className="rounded-lg bg-red-600 hover:bg-red-700 text-white py-2.5 font-semibold"
-                  >
-                    Denegar acceso
-                  </button>
+                  {cajonResidente && cajonOcupado ? (
+                    /* Cajón is occupied → show exit button */
+                    <button
+                      onClick={handleRegisterExit}
+                      disabled={grantLoading}
+                      className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white py-2.5 font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2 sm:col-span-2"
+                    >
+                      {grantLoading ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Registrando salida...</>
+                      ) : (
+                        <><LogOut className="w-5 h-5" /> Otorgar Salida</>
+                      )}
+                    </button>
+                  ) : cajonResidente && cajonDisponible ? (
+                    /* Cajón is available → show access button */
+                    <>
+                      <button
+                        onClick={handleGrantAccess}
+                        disabled={grantLoading}
+                        className="rounded-lg bg-green-600 hover:bg-green-700 text-white py-2.5 font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                      >
+                        {grantLoading ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Registrando...</>
+                        ) : (
+                          <><LogIn className="w-5 h-5" /> Otorgar Acceso</>
+                        )}
+                      </button>
+                      <button
+                        onClick={handleDenyAccess}
+                        className="rounded-lg bg-red-600 hover:bg-red-700 text-white py-2.5 font-semibold"
+                      >
+                        Denegar acceso
+                      </button>
+                    </>
+                  ) : (
+                    /* No cajón linked → cannot grant access */
+                    <div className="sm:col-span-2 text-center text-gray-500 py-2">
+                      No se puede otorgar acceso sin cajón vinculado
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -260,6 +366,21 @@ export default function VigilantePage() {
                 <div className="flex items-center gap-2 text-green-700">
                   <CheckCircle2 className="w-6 h-6" />
                   <p className="text-lg font-bold">Acceso otorgado — entrada registrada</p>
+                </div>
+                <button
+                  onClick={handleNewSearch}
+                  className="mt-3 rounded-lg bg-[#6272c8] hover:bg-[#5262b6] text-white px-4 py-2 font-semibold"
+                >
+                  Nueva búsqueda
+                </button>
+              </div>
+            )}
+
+            {resultado === 'exit-registered' && (
+              <div className="rounded-lg border border-orange-300 bg-orange-50 p-4">
+                <div className="flex items-center gap-2 text-orange-700">
+                  <LogOut className="w-6 h-6" />
+                  <p className="text-lg font-bold">Salida registrada correctamente</p>
                 </div>
                 <button
                   onClick={handleNewSearch}

@@ -250,9 +250,9 @@ export default function VisitantesActivosPage() {
               <input
                 type="text"
                 value={formData.matricula}
-                onChange={(e) => setFormData({ ...formData, matricula: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') })}
+                onChange={(e) => setFormData({ ...formData, matricula: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 10) })}
                 placeholder="Matrícula del vehículo (opcional)"
-                maxLength={15}
+                maxLength={10}
                 className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5d6bc7] font-mono"
               />
 

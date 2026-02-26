@@ -286,15 +286,11 @@ export default function UsuariosPage() {
         // 7) Create parking spot (cajón de estacionamiento)
         if (finalDeptoId) {
           try {
-            const freshEdificios = useStore.getState().edificios;
-            const edObj = freshEdificios.find((e) => e.id_edificio === finalEdificioId);
-            const edNombre = edObj?.num_edificio || `Ed.${finalEdificioId}`;
-            const cajonNombre = `${edNombre} - Depto #${finalDeptoId}`;
             await agregarCajon({
-              estado: cajonNombre,
+              estado: 'disponible',
               id_departamento_fk: finalDeptoId,
             });
-            console.log('[CREATE] Cajón creado:', cajonNombre);
+            console.log('[CREATE] Cajón creado para depto:', finalDeptoId);
           } catch (cajonErr: any) {
             console.error('[CREATE] Error creando cajón:', cajonErr?.response?.data || cajonErr);
           }

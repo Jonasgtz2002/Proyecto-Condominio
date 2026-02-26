@@ -98,6 +98,7 @@ interface AppState {
 
   // ── CRUD Accesos ──
   registrarAcceso: (data: any) => Promise<void>;
+  registrarSalidaAcceso: (id: number) => Promise<void>;
   buscarMatriculaEnAPI: (matricula: string) => Promise<ApiMatricula | null>;
 
   // ── CRUD Pagos ──
@@ -611,6 +612,14 @@ export const useStore = create<AppState>()(
           await get().fetchAccesos();
           await get().fetchAccesosActivos();
         } catch (e) { console.error('Error registrando acceso:', e); throw e; }
+      },
+
+      registrarSalidaAcceso: async (id) => {
+        try {
+          await accesosService.registrarSalida(id);
+          await get().fetchAccesos();
+          await get().fetchAccesosActivos();
+        } catch (e) { console.error('Error registrando salida:', e); throw e; }
       },
 
       buscarMatriculaEnAPI: async (matricula: string) => {
