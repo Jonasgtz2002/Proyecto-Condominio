@@ -107,25 +107,25 @@ export default function AnunciosPage() {
   if (loading) return <div className="flex items-center justify-center min-h-[50vh]"><p>Cargando...</p></div>;
 
   return (
-    <div className="min-h-screen bg-white px-8 py-8">
-      {/* Header & Search (Se mantienen igual) */}
+    <div className="min-h-screen bg-white px-4 sm:px-8 py-6 sm:py-8">
+      {/* Header & Search */}
       <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-extrabold tracking-tight text-gray-900">Anuncios</h1>
-          <p className="mt-2 text-xl font-semibold text-gray-600">Publique avisos para los residentes</p>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-gray-900">Anuncios</h1>
+          <p className="mt-2 text-base sm:text-xl font-semibold text-gray-600">Publique avisos para los residentes</p>
         </div>
       </div>
 
-      <div className="mt-10 flex items-center justify-between gap-6">
-        <div className="flex w-full max-w-2xl items-center gap-3">
+      <div className="mt-6 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
+        <div className="flex w-full sm:max-w-2xl items-center gap-3">
           <div className="flex h-12 w-full items-center gap-2 rounded-xl border-2 border-black px-3">
             <Search className="h-5 w-5 text-black" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar" className="h-full w-full bg-transparent outline-none" />
           </div>
-          <button className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#5B63D6]"><Search className="h-5 w-5 text-white" /></button>
+          <button className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#5B63D6]"><Search className="h-5 w-5 text-white" /></button>
         </div>
 
-        <button onClick={() => openModal()} className="flex items-center gap-2 rounded-xl bg-[#5B63D6] px-5 py-2.5 text-base font-semibold text-white transition hover:opacity-90">
+        <button onClick={() => openModal()} className="flex items-center justify-center gap-2 rounded-xl bg-[#5B63D6] px-5 py-2.5 text-base font-semibold text-white transition hover:opacity-90 whitespace-nowrap">
           <span className="text-lg leading-none">+</span> Nuevo Comunicado
         </button>
       </div>

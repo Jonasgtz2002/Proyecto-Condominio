@@ -224,13 +224,13 @@ export default function VigilantesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#ececed] px-4 sm:px-6 py-6">
+    <div className="min-h-screen bg-white px-4 sm:px-6 py-6">
       <div className="mx-auto w-full max-w-[1440px]">
 
         {/* Título */}
         <div className="mb-6">
-          <h1 className="text-[56px] leading-none font-extrabold text-black">Vigilantes</h1>
-          <p className="mt-3 text-[44px] sm:text-[30px] md:text-[44px] lg:text-[44px] font-semibold text-slate-700">
+          <h1 className="text-3xl sm:text-[40px] md:text-[56px] leading-none font-extrabold text-black">Vigilantes</h1>
+          <p className="mt-3 text-base sm:text-xl md:text-[22px] font-semibold text-slate-700">
             Información sobre los vigilantes
           </p>
         </div>
@@ -245,13 +245,13 @@ export default function VigilantesPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por nombre o turno"
-                className="h-[56px] w-full rounded-2xl border-[4px] border-black bg-[#f7f7f7] pl-14 pr-4 text-[38px] sm:text-[22px] md:text-[20px] text-[#1e1e1e] placeholder:text-[#1e1e1e] outline-none focus:border-[#5d6bc7]"
+                className="h-[46px] sm:h-[56px] w-full rounded-2xl border-[3px] sm:border-[4px] border-black bg-white pl-14 pr-4 text-base sm:text-lg md:text-[20px] text-[#1e1e1e] placeholder:text-[#1e1e1e] outline-none focus:border-[#5d6bc7]"
               />
             </div>
 
             <button
               type="button"
-              className="h-[56px] w-[58px] rounded-2xl bg-[#5d6bc7] text-white inline-flex items-center justify-center hover:brightness-110 transition"
+              className="h-[46px] w-[48px] sm:h-[56px] sm:w-[58px] rounded-2xl bg-[#5d6bc7] text-white inline-flex items-center justify-center hover:brightness-110 transition"
             >
               <Search className="h-8 w-8" />
             </button>
@@ -259,7 +259,7 @@ export default function VigilantesPage() {
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}
-              className="h-[56px] rounded-2xl bg-[#5d6bc7] text-white px-5 inline-flex items-center gap-2 text-[38px] sm:text-[22px] md:text-[20px] font-medium hover:brightness-110 transition"
+              className="h-[46px] sm:h-[56px] rounded-2xl bg-[#5d6bc7] text-white px-4 sm:px-5 inline-flex items-center gap-2 text-sm sm:text-lg md:text-[20px] font-medium hover:brightness-110 transition"
             >
               <Menu className="h-7 w-7" />
               Filtrar
@@ -268,7 +268,7 @@ export default function VigilantesPage() {
 
           <button
             onClick={() => openModal()}
-            className="h-[56px] rounded-2xl bg-[#5d6bc7] px-6 text-white inline-flex items-center gap-2 text-[38px] sm:text-[22px] md:text-[20px] font-medium hover:brightness-110 transition"
+            className="h-[46px] sm:h-[56px] rounded-2xl bg-[#5d6bc7] px-4 sm:px-6 text-white inline-flex items-center gap-2 text-sm sm:text-lg md:text-[20px] font-medium hover:brightness-110 transition"
           >
             <Plus className="h-7 w-7" />
             Nuevo Vigilante
@@ -317,33 +317,33 @@ export default function VigilantesPage() {
         )}
 
         {/* Tabla */}
-        <div className="rounded-2xl border border-[#777] bg-white/40 overflow-hidden">
+        <div className="rounded-2xl border border-[#777] bg-white overflow-hidden">
           <div className="max-h-[520px] overflow-auto">
             <table className="w-full min-w-[1120px] border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5d6bc7] text-white">
                   <th
-                    className="px-8 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium cursor-pointer select-none"
+                    className="px-4 sm:px-8 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium cursor-pointer select-none"
                     onClick={() => toggleSort('nombre')}
                   >
                     Nombre {sortField === 'nombre' && (sortDir === 'asc' ? '▲' : '▼')}
                   </th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Teléfono</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Email</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium">Teléfono</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium">Email</th>
                   <th
-                    className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium cursor-pointer select-none"
+                    className="px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium cursor-pointer select-none"
                     onClick={() => toggleSort('fecha_alta')}
                   >
                     Fecha de alta {sortField === 'fecha_alta' && (sortDir === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
-                    className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium cursor-pointer select-none"
+                    className="px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium cursor-pointer select-none"
                     onClick={() => toggleSort('turno')}
                   >
                     Turno {sortField === 'turno' && (sortDir === 'asc' ? '▲' : '▼')}
                   </th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Estado</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Acciones</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium">Estado</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-base md:text-[20px] font-medium">Acciones</th>
                 </tr>
               </thead>
 
@@ -356,7 +356,7 @@ export default function VigilantesPage() {
                   </tr>
                 ) : (
                   filteredVigilantes.map((vigilante) => (
-                    <tr key={vigilante.id_vigilante} className="bg-[#efeff0]">
+                    <tr key={vigilante.id_vigilante} className="bg-white">
                       <td className="px-8 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
                         {vigilante.nombre}
                       </td>
@@ -425,7 +425,7 @@ export default function VigilantesPage() {
         <button
           type="button"
           onClick={() => openModal()}
-          className="fixed bottom-8 right-8 h-[102px] w-[102px] rounded-full bg-[#5d6bc7] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 h-16 w-16 sm:h-[102px] sm:w-[102px] rounded-full bg-[#5d6bc7] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
           title="Nuevo"
         >
           <Plus className="h-14 w-14" />

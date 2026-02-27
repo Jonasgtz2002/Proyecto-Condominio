@@ -186,7 +186,7 @@ export default function VigilantePage() {
   const residente = matriculaData?.residente;
 
   return (
-    <div className="min-h-screen bg-[#efefef] text-[#111]">
+    <div className="min-h-screen bg-white text-[#111]">
       <div className="mx-auto w-full max-w-[1400px] px-4 md:px-6 lg:px-8 py-5 space-y-6">
         {/* Header */}
         <section>
@@ -225,7 +225,7 @@ export default function VigilantePage() {
                   }
                   placeholder="Ingrese matrícula"
                   maxLength={10}
-                  className="w-full h-12 md:h-14 rounded-xl border-[3px] border-black bg-[#f3f3f3] px-4 text-[clamp(1rem,1.8vw,1.8rem)] placeholder:text-[#696969] outline-none"
+                  className="w-full h-12 md:h-14 rounded-xl border-[3px] border-black bg-white px-4 text-[clamp(1rem,1.8vw,1.8rem)] placeholder:text-[#696969] outline-none"
                 />
                 <p className="mt-1 text-right text-[clamp(.95rem,1.6vw,1.8rem)] text-[#6e6e6e] leading-none">
                   {matricula.length}/10
@@ -439,7 +439,7 @@ export default function VigilantePage() {
                   {['Matrícula', 'Residente / Visitante', 'Hora Entrada', 'Edificio', 'Estado'].map((h) => (
                     <th
                       key={h}
-                      className="border-[3px] border-[#9a9a9a] bg-[#f2f2f2] px-3 py-2 text-[clamp(.9rem,1.2vw,1.8rem)] font-extrabold"
+                      className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-[clamp(.9rem,1.2vw,1.8rem)] font-extrabold"
                     >
                       {h}
                     </th>

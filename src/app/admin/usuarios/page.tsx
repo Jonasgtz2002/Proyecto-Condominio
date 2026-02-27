@@ -393,16 +393,16 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eeeeef] px-4 sm:px-6 py-6">
+    <div className="min-h-screen bg-white px-4 sm:px-6 py-6">
       {/* Contenedor principal SIN zoom visual */}
       <div className="mx-auto w-full max-w-[1440px]">
 
         {/* Título */}
         <div className="mb-6">
-          <h1 className="text-[42px] leading-tight font-extrabold text-black">
+          <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
             Directorio de residentes
           </h1>
-          <p className="mt-2 text-[40px] sm:text-[36px] md:text-[22px] font-semibold text-slate-700">
+          <p className="mt-2 text-base sm:text-lg md:text-[22px] font-semibold text-slate-700">
             Información sobre los residentes
           </p>
         </div>
@@ -411,38 +411,38 @@ export default function UsuariosPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative w-full md:w-[540px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-7 w-7 text-[#1a1a1a]" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-7 sm:w-7 text-[#1a1a1a]" />
               <input
                 type="text"
                 placeholder="Buscar"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-[54px] w-full rounded-2xl border-[3px] border-black bg-[#f6f6f7] pl-14 pr-4 text-[34px] sm:text-[20px] md:text-[18px] text-[#1d1d1d] placeholder:text-[#1d1d1d] outline-none focus:border-[#5f6ec9]"
+                className="h-[46px] sm:h-[54px] w-full rounded-2xl border-[3px] border-black bg-white pl-14 pr-4 text-base sm:text-lg md:text-[18px] text-[#1d1d1d] placeholder:text-[#1d1d1d] outline-none focus:border-[#5f6ec9]"
               />
             </div>
 
             <button
               type="button"
-              className="h-[54px] w-[58px] rounded-2xl bg-[#5f6ec9] text-white flex items-center justify-center hover:brightness-110 transition"
+              className="h-[46px] w-[48px] sm:h-[54px] sm:w-[58px] rounded-2xl bg-[#5f6ec9] text-white flex items-center justify-center hover:brightness-110 transition"
             >
-              <Search className="h-8 w-8" />
+              <Search className="h-6 w-6 sm:h-8 sm:w-8" />
             </button>
 
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}
-              className="h-[54px] rounded-2xl bg-[#5f6ec9] text-white px-5 inline-flex items-center gap-2 text-[36px] sm:text-[20px] md:text-[18px] font-medium hover:brightness-110 transition"
+              className="h-[46px] sm:h-[54px] rounded-2xl bg-[#5f6ec9] text-white px-4 sm:px-5 inline-flex items-center gap-2 text-sm sm:text-lg md:text-[18px] font-medium hover:brightness-110 transition"
             >
-              <Filter className="h-7 w-7" />
+              <Filter className="h-5 w-5 sm:h-7 sm:w-7" />
               Filtrar
             </button>
           </div>
 
           <button
             onClick={() => openModal()}
-            className="h-[54px] rounded-2xl bg-[#5f6ec9] text-white px-6 inline-flex items-center gap-2 text-[36px] sm:text-[20px] md:text-[18px] font-medium hover:brightness-110 transition"
+            className="h-[46px] sm:h-[54px] rounded-2xl bg-[#5f6ec9] text-white px-4 sm:px-6 inline-flex items-center gap-2 text-sm sm:text-lg md:text-[18px] font-medium hover:brightness-110 transition"
           >
-            <Plus className="h-7 w-7" />
+            <Plus className="h-5 w-5 sm:h-7 sm:w-7" />
             Nuevo Residente
           </button>
         </div>
@@ -478,21 +478,76 @@ export default function UsuariosPage() {
           </div>
         )}
 
-        {/* Tabla estilo referencia */}
-        <div className="rounded-2xl border border-[#8b8b8b] overflow-hidden bg-white/40">
-          <div className="max-h-[500px] overflow-auto">
-            <table className="w-full min-w-[1200px] border-separate border-spacing-0">
+        {/* Vista móvil: tarjetas */}
+        <div className="md:hidden space-y-3">
+          {filteredResidentes.length === 0 ? (
+            <div className="rounded-2xl border border-[#8b8b8b] bg-white px-6 py-10 text-center text-slate-600">
+              No hay residentes para mostrar
+            </div>
+          ) : (
+            filteredResidentes.map((residente) => {
+              const estadoPago = getEstadoPago(residente.id_residente);
+              const pago = getPagoResidente(residente.id_residente);
+              return (
+                <div key={residente.id_residente} className="rounded-2xl border border-[#8b8b8b] bg-white p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-[#2a2a2a] text-base truncate">{residente.nombre}</p>
+                      <p className="text-sm text-slate-500 truncate">{residente.usuario?.correo || '-'}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-2xl px-3 py-1 text-xs font-semibold whitespace-nowrap flex-shrink-0 ${estadoPago === 'pagado'
+                        ? 'bg-[#8BC46A] text-white'
+                        : estadoPago === 'sin_info'
+                          ? 'bg-gray-400 text-white'
+                          : 'bg-[#ff5757] text-white'
+                        }`}
+                    >
+                      {estadoPago === 'pagado' ? 'Pagado' : estadoPago === 'sin_info' ? 'Sin info' : 'Pago Vencido'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <p><span className="font-semibold text-slate-600">Edificio:</span> {residente.edificio?.num_edificio || '-'}</p>
+                    <p><span className="font-semibold text-slate-600">Depto:</span> {residente.departamento?.num_departamento || residente.departamento?.id_departamento || '-'}</p>
+                    <p><span className="font-semibold text-slate-600">Tel:</span> {residente.telefono || '-'}</p>
+                    <p><span className="font-semibold text-slate-600">Monto:</span> {pago ? `$${Number(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '-'}</p>
+                    <p className="col-span-2"><span className="font-semibold text-slate-600">Próx. pago:</span> {pago?.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-MX') : '-'}</p>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200">
+                    <button
+                      onClick={() => openModal(residente)}
+                      className="p-2 rounded-lg text-[#5f6ec9] hover:bg-[#e9ecff] transition"
+                    >
+                      <Edit2 className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(residente.id_residente)}
+                      className="p-2 rounded-lg text-[#ff5757] hover:bg-[#ffeaea] transition"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Vista desktop: tabla */}
+        <div className="hidden md:block rounded-2xl border border-[#8b8b8b] overflow-hidden bg-white">
+          <div className="max-h-[500px] overflow-y-auto">
+            <table className="w-full table-fixed border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5f6ec9] text-white">
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-8 py-5">Nombre</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Edificio</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Departamento</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Email</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Teléfono</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Monto</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Próx. pago</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Estatus</th>
-                  <th className="text-left font-medium text-[34px] sm:text-[20px] md:text-[18px] px-6 py-5">Acciones</th>
+                  <th className="w-[15%] text-left font-medium text-sm lg:text-base px-3 lg:px-6 py-4">Nombre</th>
+                  <th className="w-[8%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Edificio</th>
+                  <th className="w-[9%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Depto</th>
+                  <th className="w-[18%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Email</th>
+                  <th className="w-[11%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Teléfono</th>
+                  <th className="w-[9%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Monto</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Próx. pago</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Estatus</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Acciones</th>
                 </tr>
               </thead>
 
@@ -509,44 +564,44 @@ export default function UsuariosPage() {
                     const pago = getPagoResidente(residente.id_residente);
 
                     return (
-                      <tr key={residente.id_residente} className="bg-[#f2f2f3]">
-                        <td className="px-8 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                      <tr key={residente.id_residente} className="bg-white">
+                        <td className="px-3 lg:px-6 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate">
                           {residente.nombre}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {residente.edificio?.num_edificio || '-'}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {residente.departamento?.num_departamento || residente.departamento?.id_departamento || '-'}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate">
                           {residente.usuario?.correo || '-'}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {residente.telefono || '-'}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {pago ? `$${Number(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '-'}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {pago?.fecha_vencimiento
                             ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-MX')
                             : '-'}
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2]">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2]">
                           <span
-                            className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[20px] sm:text-[16px] font-semibold ${estadoPago === 'pagado'
+                            className={`inline-flex items-center rounded-2xl px-3 py-1 text-xs lg:text-sm font-semibold whitespace-nowrap ${estadoPago === 'pagado'
                               ? 'bg-[#8BC46A] text-white'
                               : estadoPago === 'sin_info'
                                 ? 'bg-gray-400 text-white'
                                 : 'bg-[#ff5757] text-white'
                               }`}
                           >
-                            {estadoPago === 'pagado' ? 'Pagado' : estadoPago === 'sin_info' ? 'Sin info' : 'Pago Vencido'}
+                            {estadoPago === 'pagado' ? 'Pagado' : estadoPago === 'sin_info' ? 'Sin info' : 'Vencido'}
                           </span>
                         </td>
-                        <td className="px-6 py-5 border-t border-[#a2a2a2]">
-                          <div className="flex items-center gap-2">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2]">
+                          <div className="flex items-center gap-1">
                             <button
                               onClick={() => openModal(residente)}
                               className="p-2 rounded-lg text-[#5f6ec9] hover:bg-[#e9ecff] transition"
@@ -559,7 +614,7 @@ export default function UsuariosPage() {
                               className="p-2 rounded-lg text-[#ff5757] hover:bg-[#ffeaea] transition"
                               title="Eliminar"
                             >
-                              <Trash2 className="h-6 w-6" />
+                              <Trash2 className="h-5 w-5" />
                             </button>
                           </div>
                         </td>
@@ -576,10 +631,10 @@ export default function UsuariosPage() {
         <button
           type="button"
           onClick={() => openModal()}
-          className="fixed bottom-8 right-8 h-[92px] w-[92px] rounded-full bg-[#5f6ec9] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 h-16 w-16 sm:h-[92px] sm:w-[92px] rounded-full bg-[#5f6ec9] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
           title="Nuevo Residente"
         >
-          <Plus className="h-12 w-12" />
+          <Plus className="h-8 w-8 sm:h-12 sm:w-12" />
         </button>
       </div>
 
@@ -818,7 +873,7 @@ export default function UsuariosPage() {
       {/* Floating error toast */}
       {error && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
-          <div className="bg-red-400 text-white px-10 py-5 rounded-2xl shadow-2xl text-lg font-semibold pointer-events-auto max-w-md text-center">
+          <div className="bg-red-400 text-white px-6 sm:px-10 py-4 sm:py-5 rounded-2xl shadow-2xl text-sm sm:text-lg font-semibold pointer-events-auto max-w-[90vw] sm:max-w-md text-center">
             {error}
           </div>
         </div>

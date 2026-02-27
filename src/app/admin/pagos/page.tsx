@@ -34,19 +34,19 @@ export default function PagosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white px-8 py-8">
+    <div className="min-h-screen bg-white px-4 sm:px-8 py-6 sm:py-8">
       {/* Top bar */}
       <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
             Panel de administrador
           </h1>
 
-          <div className="mt-4 space-y-0.5">
-            <p className="text-xl font-semibold text-gray-700">
+          <div className="mt-3 sm:mt-4 space-y-0.5">
+            <p className="text-base sm:text-xl font-semibold text-gray-700">
               Gestión de la Unidad Habitacional
             </p>
-            <p className="text-xl font-semibold text-gray-700">
+            <p className="text-base sm:text-xl font-semibold text-gray-700">
               Estatus de pagos
             </p>
           </div>
@@ -56,25 +56,25 @@ export default function PagosPage() {
       </div>
 
       {/* Tabla */}
-      <div className="mt-14 flex justify-center">
+      <div className="mt-8 sm:mt-14 flex justify-center">
         <div className="w-full max-w-5xl overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-base">
               <thead>
                 <tr className="bg-[#CED8FF]">
-                  <th className="w-[28%] px-6 py-5 text-left text-lg font-extrabold text-gray-900">
+                  <th className="w-[28%] px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-lg font-extrabold text-gray-900">
                     Residente
                   </th>
-                  <th className="w-[22%] px-6 py-5 text-left text-lg font-extrabold text-gray-900">
+                  <th className="w-[22%] px-3 sm:px-6 py-3 sm:py-5 text-left text-sm sm:text-lg font-extrabold text-gray-900">
                     Estado
                   </th>
-                  <th className="w-[16%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
+                  <th className="w-[16%] px-3 sm:px-6 py-3 sm:py-5 text-center text-sm sm:text-lg font-extrabold text-gray-900">
                     Deuda total
                   </th>
-                  <th className="w-[16%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
+                  <th className="w-[16%] px-3 sm:px-6 py-3 sm:py-5 text-center text-sm sm:text-lg font-extrabold text-gray-900">
                     Fecha límite
                   </th>
-                  <th className="w-[16%] px-6 py-5 text-center text-lg font-extrabold text-gray-900">
+                  <th className="w-[16%] px-3 sm:px-6 py-3 sm:py-5 text-center text-sm sm:text-lg font-extrabold text-gray-900">
                     Último pago
                   </th>
                 </tr>

@@ -40,19 +40,19 @@ export default function EstacionamientoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white px-10 py-8">
+    <div className="min-h-screen bg-white px-4 sm:px-10 py-6 sm:py-8">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-6xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900">
             Panel de administrador
           </h1>
 
-          <div className="mt-6 space-y-1">
-            <p className="text-2xl font-semibold text-gray-700">
+          <div className="mt-4 sm:mt-6 space-y-1">
+            <p className="text-lg sm:text-2xl font-semibold text-gray-700">
               Gestión de la Unidad Habitacional
             </p>
-            <p className="text-2xl font-semibold text-gray-700">
+            <p className="text-lg sm:text-2xl font-semibold text-gray-700">
               Estacionamiento
             </p>
           </div>
@@ -65,15 +65,15 @@ export default function EstacionamientoPage() {
           No hay cajones de estacionamiento registrados.
         </div>
       ) : (
-        <div className="mt-16 flex justify-center">
-          <div className="flex gap-24">
+        <div className="mt-8 sm:mt-16 flex justify-center">
+          <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 lg:gap-24">
             {/* Bloque izquierdo */}
-            <div className="grid grid-cols-3 gap-x-4 gap-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 sm:gap-x-4 gap-y-4 sm:gap-y-6">
               {izquierda.map((espacio) => (
                 <div
                   key={espacio.id_cajon}
                   className={[
-                    'flex h-44 w-40 flex-col items-center justify-center rounded-2xl px-2',
+                    'flex h-32 w-28 sm:h-44 sm:w-40 flex-col items-center justify-center rounded-2xl px-2',
                     'select-none font-extrabold tracking-wide',
                     'transition hover:opacity-90',
                     isOcupado(espacio)
@@ -81,8 +81,8 @@ export default function EstacionamientoPage() {
                       : 'bg-[#9BC873] text-black',
                   ].join(' ')}
                 >
-                  <span className="text-3xl">{espacio.id_cajon}</span>
-                  <span className="mt-1 text-center text-[11px] font-semibold leading-tight opacity-80">
+                  <span className="text-xl sm:text-3xl">{espacio.id_cajon}</span>
+                  <span className="mt-1 text-center text-[10px] sm:text-[11px] font-semibold leading-tight opacity-80">
                     {getLabel(espacio)}
                   </span>
                 </div>
@@ -91,12 +91,12 @@ export default function EstacionamientoPage() {
 
             {/* Bloque derecho */}
             {derecha.length > 0 && (
-              <div className="grid grid-cols-3 gap-x-4 gap-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 sm:gap-x-4 gap-y-4 sm:gap-y-6">
                 {derecha.map((espacio) => (
                   <div
                     key={espacio.id_cajon}
                     className={[
-                      'flex h-44 w-40 flex-col items-center justify-center rounded-2xl px-2',
+                      'flex h-32 w-28 sm:h-44 sm:w-40 flex-col items-center justify-center rounded-2xl px-2',
                       'select-none font-extrabold tracking-wide',
                       'transition hover:opacity-90',
                       isOcupado(espacio)
@@ -104,8 +104,8 @@ export default function EstacionamientoPage() {
                         : 'bg-[#9BC873] text-black',
                     ].join(' ')}
                   >
-                    <span className="text-3xl">{espacio.id_cajon}</span>
-                    <span className="mt-1 text-center text-[11px] font-semibold leading-tight opacity-80">
+                    <span className="text-xl sm:text-3xl">{espacio.id_cajon}</span>
+                    <span className="mt-1 text-center text-[10px] sm:text-[11px] font-semibold leading-tight opacity-80">
                       {getLabel(espacio)}
                     </span>
                   </div>

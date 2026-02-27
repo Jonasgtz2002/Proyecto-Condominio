@@ -50,7 +50,7 @@ export default function AdminLayout({
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar />
-      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className={`flex-1 overflow-x-hidden transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {/* Botón Cerrar Sesión */}
         <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex justify-end">
           <button

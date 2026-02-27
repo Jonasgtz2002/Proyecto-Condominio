@@ -106,19 +106,19 @@ export default function VisitantesActivosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#ececed] flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <p className="text-xl text-slate-600">Cargando visitantes...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#ececed] px-4 sm:px-6 py-6">
-      <div className="mx-auto w-full max-w-[1440px]">
+    <div className="min-h-screen bg-white px-4 sm:px-6 py-6 overflow-x-hidden">
+      <div className="w-full">
         {/* Título */}
         <div className="mb-6">
-          <h1 className="text-[56px] leading-none font-extrabold text-black">Visitantes Activos</h1>
-          <p className="mt-3 text-[44px] sm:text-[30px] md:text-[44px] lg:text-[44px] font-semibold text-slate-700">
+          <h1 className="text-3xl sm:text-[40px] md:text-[56px] leading-none font-extrabold text-black">Visitantes Activos</h1>
+          <p className="mt-3 text-base sm:text-xl md:text-[22px] font-semibold text-slate-700">
             Visitantes actualmente dentro del condominio
           </p>
         </div>
@@ -133,32 +133,71 @@ export default function VisitantesActivosPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar visitante"
-                className="h-[56px] w-full rounded-2xl border-[4px] border-black bg-[#f7f7f7] pl-14 pr-4 text-[38px] sm:text-[22px] md:text-[20px] text-[#1e1e1e] placeholder:text-[#1e1e1e] outline-none focus:border-[#5d6bc7]"
+                className="h-[46px] sm:h-[56px] w-full rounded-2xl border-[3px] sm:border-[4px] border-black bg-white pl-14 pr-4 text-base sm:text-lg md:text-[20px] text-[#1e1e1e] placeholder:text-[#1e1e1e] outline-none focus:border-[#5d6bc7]"
               />
             </div>
           </div>
 
           <button
             onClick={openModal}
-            className="h-[56px] rounded-2xl bg-[#5d6bc7] px-6 text-white inline-flex items-center gap-2 text-[38px] sm:text-[22px] md:text-[20px] font-medium hover:brightness-110 transition"
+            className="h-[46px] sm:h-[56px] rounded-2xl bg-[#5d6bc7] px-4 sm:px-6 text-white inline-flex items-center gap-2 text-sm sm:text-lg md:text-[20px] font-medium hover:brightness-110 transition"
           >
             <Plus className="h-7 w-7" />
             Registrar Visitante
           </button>
         </div>
 
-        {/* Tabla */}
-        <div className="rounded-2xl border border-[#777] bg-white/40 overflow-hidden">
-          <div className="max-h-[520px] overflow-auto">
-            <table className="w-full min-w-[900px] border-separate border-spacing-0">
+        {/* Vista móvil: tarjetas */}
+        <div className="md:hidden space-y-3">
+          {filteredVisitantes.length === 0 ? (
+            <div className="rounded-2xl border border-[#777] bg-white px-6 py-12 text-center text-slate-600">
+              No hay visitantes activos.
+            </div>
+          ) : (
+            filteredVisitantes.map((visitante) => (
+              <div key={visitante.id_visitante} className="rounded-2xl border border-[#777] bg-white p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-bold text-[#292929] text-base truncate">{visitante.nombre}</p>
+                  <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
+                    {(() => {
+                      const horaEntrada = (visitante as any).hora_entrada || (visitante as any).accesos?.[0]?.hora_entrada;
+                      if (horaEntrada) return formatearFecha(horaEntrada);
+                      if (visitante.createdAt) return formatearFecha(visitante.createdAt);
+                      return '-';
+                    })()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <p><span className="font-semibold text-slate-600">Empresa:</span> {visitante.empresa || '-'}</p>
+                  <p><span className="font-semibold text-slate-600">Edificio:</span> {(visitante as any).edificio?.num_edificio || '-'}</p>
+                  <p><span className="font-semibold text-slate-600">Depto:</span> {(visitante as any).departamento?.num_departamento || '-'}</p>
+                </div>
+                <div className="pt-2 border-t border-slate-200">
+                  <button
+                    onClick={() => handleSalida(visitante.id_visitante)}
+                    className="w-full rounded-2xl bg-red-500 px-4 py-2 text-white text-sm font-medium hover:bg-red-600 transition inline-flex items-center justify-center gap-2"
+                  >
+                    <UserX className="h-4 w-4" />
+                    Registrar Salida
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Vista desktop: tabla */}
+        <div className="hidden md:block rounded-2xl border border-[#777] bg-white overflow-hidden">
+          <div className="max-h-[520px] overflow-y-auto">
+            <table className="w-full table-fixed border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5d6bc7] text-white">
-                  <th className="px-8 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Nombre</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Empresa</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Edificio</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Departamento</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Hora Entrada</th>
-                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Acciones</th>
+                  <th className="w-[20%] px-4 py-4 text-left text-sm lg:text-base font-medium">Nombre</th>
+                  <th className="w-[15%] px-3 py-4 text-left text-sm lg:text-base font-medium">Empresa</th>
+                  <th className="w-[12%] px-3 py-4 text-left text-sm lg:text-base font-medium">Edificio</th>
+                  <th className="w-[13%] px-3 py-4 text-left text-sm lg:text-base font-medium">Departamento</th>
+                  <th className="w-[18%] px-3 py-4 text-left text-sm lg:text-base font-medium">Hora Entrada</th>
+                  <th className="w-[22%] px-3 py-4 text-left text-sm lg:text-base font-medium">Acciones</th>
                 </tr>
               </thead>
 
@@ -171,20 +210,20 @@ export default function VisitantesActivosPage() {
                   </tr>
                 ) : (
                   filteredVisitantes.map((visitante) => (
-                    <tr key={visitante.id_visitante} className="bg-[#efeff0]">
-                      <td className="px-8 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                    <tr key={visitante.id_visitante} className="bg-white">
+                      <td className="px-4 py-4 border-t border-[#8f8f8f] text-sm lg:text-[15px] text-[#292929] truncate">
                         {visitante.nombre}
                       </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                      <td className="px-3 py-4 border-t border-[#8f8f8f] text-sm lg:text-[15px] text-[#292929] truncate">
                         {visitante.empresa || '-'}
                       </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                      <td className="px-3 py-4 border-t border-[#8f8f8f] text-sm lg:text-[15px] text-[#292929]">
                         {(visitante as any).edificio?.num_edificio || '-'}
                       </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                      <td className="px-3 py-4 border-t border-[#8f8f8f] text-sm lg:text-[15px] text-[#292929]">
                         {(visitante as any).departamento?.num_departamento || '-'}
                       </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                      <td className="px-3 py-4 border-t border-[#8f8f8f] text-sm lg:text-[15px] text-[#292929]">
                         {(() => {
                           const horaEntrada = (visitante as any).hora_entrada || (visitante as any).accesos?.[0]?.hora_entrada;
                           if (horaEntrada) return formatearFecha(horaEntrada);
@@ -192,10 +231,10 @@ export default function VisitantesActivosPage() {
                           return '-';
                         })()}
                       </td>
-                      <td className="px-6 py-5 border-t border-[#8f8f8f]">
+                      <td className="px-3 py-4 border-t border-[#8f8f8f]">
                         <button
                           onClick={() => handleSalida(visitante.id_visitante)}
-                          className="rounded-2xl bg-red-500 px-5 py-2 text-white text-[18px] font-medium hover:bg-red-600 transition inline-flex items-center gap-2"
+                          className="rounded-2xl bg-red-500 px-4 py-1.5 text-white text-sm font-medium hover:bg-red-600 transition inline-flex items-center gap-2"
                         >
                           <UserX className="h-4 w-4" />
                           Registrar Salida

@@ -30,7 +30,7 @@ export default function HistorialPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Historial de Visitas</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Historial de accesos</h1>
           <p className="text-gray-600 mt-2">Cargando historial...</p>
         </div>
       </div>
@@ -38,21 +38,21 @@ export default function HistorialPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Historial de Visitas</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Historial de accesos</h1>
         <p className="text-gray-600 mt-2">
-          Registro de todos los visitantes que has recibido
+          Registro de todos los accesos a tu departamento
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Historial Completo ({historial.length} registros)</CardTitle>
+          <CardTitle>Historial completo ({historial.length} registros)</CardTitle>
         </CardHeader>
         <CardContent>
           {historial.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No hay registros de visitas</p>
+            <p className="text-gray-500 text-center py-8">No hay registros de accesos</p>
           ) : (
             <div className="space-y-3">
               {historial.map((registro) => {
@@ -116,8 +116,8 @@ export default function HistorialPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600">Total de Visitas</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
+              <p className="text-sm font-medium text-gray-600">Total de accesos</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">
                 {historial.length}
               </p>
             </CardContent>
@@ -125,8 +125,8 @@ export default function HistorialPage() {
 
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600">Visitantes Únicos</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
+              <p className="text-sm font-medium text-gray-600">Visitantes únicos</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">
                 {new Set(historial.filter(r => r.visitante).map((r) => r.visitante!.id_visitante)).size}
               </p>
             </CardContent>
@@ -134,8 +134,8 @@ export default function HistorialPage() {
 
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600">Visitas Este Mes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
+              <p className="text-sm font-medium text-gray-600">Accesos este mes</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">
                 {historial.filter((r) => {
                   const fecha = r.createdAt ? new Date(r.createdAt) : null;
                   const hoy = new Date();

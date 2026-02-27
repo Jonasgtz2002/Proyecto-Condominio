@@ -50,12 +50,12 @@ export default function ResidentePage() {
   const nextAnuncio = () => setCarouselIdx((i) => (i >= anuncios.length - 1 ? 0 : i + 1));
 
   return (
-    <div className="min-h-screen bg-white p-8 font-sans text-gray-800">
+    <div className="min-h-screen bg-white p-4 sm:p-8 font-sans text-gray-800">
       {/* Header */}
-      <div className="flex justify-between items-start mb-10">
+      <div className="flex justify-between items-start mb-6 sm:mb-10">
         <div>
-          <h1 className="text-4xl font-bold text-black">Panel de Residente</h1>
-          <p className="text-xl text-gray-500 font-semibold mt-1">Bienvenido, {user?.nombre || 'Residente'}</p>
+          <h1 className="text-2xl sm:text-4xl font-bold text-black">Panel de Residente</h1>
+          <p className="text-base sm:text-xl text-gray-500 font-semibold mt-1">Bienvenido, {user?.nombre || 'Residente'}</p>
         </div>
       </div>
 
@@ -64,18 +64,18 @@ export default function ResidentePage() {
         {/* Secci\u00f3n: Informaci\u00f3n de registro */}
         <section>
           <div className="bg-[#636eb4] text-white text-center py-2 rounded-t-lg font-bold text-lg border-2 border-[#636eb4]">
-            Informaci\u00f3n de registro
+            Información de registro
           </div>
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3">
             <div className="border-2 border-gray-400 text-center">
               <div className="font-bold py-2 border-b-2 border-gray-400"># de edificio</div>
               <div className="py-2">{user?.edificio?.num_edificio || user?.num_edificio || '-'}</div>
             </div>
-            <div className="border-2 border-l-0 border-gray-400 text-center">
+            <div className="border-2 border-t-0 sm:border-t-2 sm:border-l-0 border-gray-400 text-center">
               <div className="font-bold py-2 border-b-2 border-gray-400">Departamento</div>
               <div className="py-2">{user?.departamento?.id_departamento || user?.id_departamento || '-'}</div>
             </div>
-            <div className="border-2 border-l-0 border-gray-400 text-center">
+            <div className="border-2 border-t-0 sm:border-t-2 sm:border-l-0 border-gray-400 text-center">
               <div className="font-bold py-2 border-b-2 border-gray-400"># de teléfono</div>
               <div className="py-2">{user?.telefono || '-'}</div>
             </div>
@@ -95,11 +95,11 @@ export default function ResidentePage() {
               </div>
             </div>
             <div className="grid grid-cols-2 border-b-2 border-gray-400">
-              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Deuda Total</div>
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Deuda total</div>
               <div className="py-2 text-center">${deudaTotal}</div>
             </div>
             <div className="grid grid-cols-2 border-b-2 border-gray-400">
-              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Pr\u00f3ximo vencimiento</div>
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Próximo vencimiento</div>
               <div className="py-2 text-center">
                 {pagosPendientes.length > 0 && pagosPendientes[0].fecha_vencimiento
                   ? new Date(pagosPendientes[0].fecha_vencimiento).toLocaleDateString('es-MX')
@@ -107,7 +107,7 @@ export default function ResidentePage() {
               </div>
             </div>
             <div className="grid grid-cols-2">
-              <div className="font-bold py-2 text-center border-r-2 border-gray-400">\u00daltimo Pago</div>
+              <div className="font-bold py-2 text-center border-r-2 border-gray-400">Último pago</div>
               <div className="py-2 text-center">
                 {ultimoPago?.fecha_ultimopago
                   ? new Date(ultimoPago.fecha_ultimopago).toLocaleDateString('es-MX')
