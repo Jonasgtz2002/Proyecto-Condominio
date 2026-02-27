@@ -41,22 +41,20 @@ export default function EstacionamientoPage() {
 
   return (
     <div className="min-h-screen bg-white px-4 sm:px-10 py-6 sm:py-8">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900">
-            Panel de administrador
-          </h1>
+      {/* Encabezado */}
+      <div className="mb-2">
+        <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+          Panel de administración
+        </h1>
+        <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+          Gestión de la unidad habitacional
+        </p>
+      </div>
 
-          <div className="mt-4 sm:mt-6 space-y-1">
-            <p className="text-lg sm:text-2xl font-semibold text-gray-700">
-              Gestión de la Unidad Habitacional
-            </p>
-            <p className="text-lg sm:text-2xl font-semibold text-gray-700">
-              Estacionamiento
-            </p>
-          </div>
-        </div>
+      <div className="mb-4">
+        <h2 className="text-xl sm:text-2xl md:text-[28px] leading-tight font-bold text-black">
+          Estacionamiento
+        </h2>
       </div>
 
       {/* Grid */}

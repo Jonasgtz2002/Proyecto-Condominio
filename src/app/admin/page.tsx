@@ -64,9 +64,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-        <h1 className="text-3xl font-bold text-white mb-2">Panel de administrador</h1>
-        <p className="text-slate-300">Gestión de la Unidad Habitacional</p>
+      <div className="mb-2">
+        <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+          Panel de administración
+        </h1>
+        <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+          Gestión de la unidad habitacional
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

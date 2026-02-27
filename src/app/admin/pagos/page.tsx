@@ -36,23 +36,19 @@ export default function PagosPage() {
   return (
     <div className="min-h-screen bg-white px-4 sm:px-8 py-6 sm:py-8">
       {/* Top bar */}
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
-            Panel de administrador
-          </h1>
+      <div className="mb-2">
+        <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+          Panel de administración
+        </h1>
+        <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+          Gestión de la unidad habitacional
+        </p>
+      </div>
 
-          <div className="mt-3 sm:mt-4 space-y-0.5">
-            <p className="text-base sm:text-xl font-semibold text-gray-700">
-              Gestión de la Unidad Habitacional
-            </p>
-            <p className="text-base sm:text-xl font-semibold text-gray-700">
-              Estatus de pagos
-            </p>
-          </div>
-        </div>
-
-        
+      <div className="mb-4">
+        <h2 className="text-xl sm:text-2xl md:text-[28px] leading-tight font-bold text-black">
+          Estatus de pagos
+        </h2>
       </div>
 
       {/* Tabla */}

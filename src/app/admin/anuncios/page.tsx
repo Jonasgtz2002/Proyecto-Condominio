@@ -108,12 +108,20 @@ export default function AnunciosPage() {
 
   return (
     <div className="min-h-screen bg-white px-4 sm:px-8 py-6 sm:py-8">
-      {/* Header & Search */}
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-gray-900">Anuncios</h1>
-          <p className="mt-2 text-base sm:text-xl font-semibold text-gray-600">Publique avisos para los residentes</p>
-        </div>
+      {/* Encabezado */}
+      <div className="mb-2">
+        <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+          Panel de administración
+        </h1>
+        <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+          Gestión de la unidad habitacional
+        </p>
+      </div>
+
+      <div className="mb-4">
+        <h2 className="text-xl sm:text-2xl md:text-[28px] leading-tight font-bold text-black">
+          Anuncios
+        </h2>
       </div>
 
       <div className="mt-6 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">

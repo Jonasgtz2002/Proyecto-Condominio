@@ -115,12 +115,21 @@ export default function VisitantesActivosPage() {
   return (
     <div className="min-h-screen bg-white px-4 sm:px-6 py-6 overflow-x-hidden">
       <div className="w-full">
-        {/* Título */}
-        <div className="mb-6">
-          <h1 className="text-3xl sm:text-[40px] md:text-[56px] leading-none font-extrabold text-black">Visitantes Activos</h1>
-          <p className="mt-3 text-base sm:text-xl md:text-[22px] font-semibold text-slate-700">
-            Visitantes actualmente dentro del condominio
+        {/* Encabezado */}
+        <div className="mb-2">
+          <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+            Panel de vigilancia
+          </h1>
+          <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+            Gestión de la unidad habitacional
           </p>
+        </div>
+
+        {/* Título de sección */}
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-[28px] leading-tight font-bold text-black">
+            Visitantes activos
+          </h2>
         </div>
 
         {/* Barra superior */}

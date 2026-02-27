@@ -188,14 +188,20 @@ export default function VigilantePage() {
   return (
     <div className="min-h-screen bg-white text-[#111]">
       <div className="mx-auto w-full max-w-[1400px] px-4 md:px-6 lg:px-8 py-5 space-y-6">
-        {/* Header */}
+        {/* Encabezado */}
         <section>
-          <h1 className="font-extrabold tracking-tight text-[clamp(1.8rem,3vw,3rem)] leading-tight">
-            Control de Acceso - Vigilancia
+          <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+            Panel de vigilancia
           </h1>
-          <p className="mt-1 font-semibold text-[#626262] text-[clamp(1rem,1.8vw,1.9rem)]">
-            Sistema de verificación de vehículos y registros
+          <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+            Gestión de la unidad habitacional
           </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl sm:text-2xl md:text-[28px] leading-tight font-bold text-black">
+            Control de acceso
+          </h2>
         </section>
 
         {/* Franja roja */}

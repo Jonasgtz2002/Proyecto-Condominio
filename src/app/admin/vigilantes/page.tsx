@@ -227,12 +227,21 @@ export default function VigilantesPage() {
     <div className="min-h-screen bg-white px-4 sm:px-6 py-6">
       <div className="mx-auto w-full max-w-[1440px]">
 
-        {/* Título */}
-        <div className="mb-6">
-          <h1 className="text-3xl sm:text-[40px] md:text-[56px] leading-none font-extrabold text-black">Vigilantes</h1>
-          <p className="mt-3 text-base sm:text-xl md:text-[22px] font-semibold text-slate-700">
-            Información sobre los vigilantes
+        {/* Encabezado */}
+        <div className="mb-2">
+          <h1 className="text-2xl sm:text-4xl md:text-[42px] leading-tight font-extrabold text-black">
+            Panel de administración
+          </h1>
+          <p className="mt-1 text-base sm:text-lg md:text-[20px] font-semibold text-gray-400">
+            Gestión de la unidad habitacional
           </p>
+        </div>
+
+        {/* Título de sección */}
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-[28px] leading-tight font-bold text-black">
+            Directorio de vigilantes
+          </h2>
         </div>
 
         {/* Barra superior */}
