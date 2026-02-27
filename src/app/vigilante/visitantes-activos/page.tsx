@@ -72,6 +72,7 @@ export default function VisitantesActivosPage() {
         id_departamento_fk: Number(formData.id_departamento_fk),
         activo: 'S',
         matricula: formData.matricula.trim() || undefined,
+        hora_entrada: new Date().toISOString(),
       });
       closeModal();
     } catch (error: any) {
@@ -154,6 +155,8 @@ export default function VisitantesActivosPage() {
                 <tr className="bg-[#5d6bc7] text-white">
                   <th className="px-8 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Nombre</th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Empresa</th>
+                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Edificio</th>
+                  <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Departamento</th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Hora Entrada</th>
                   <th className="px-6 py-5 text-left text-[36px] sm:text-[22px] md:text-[20px] font-medium">Acciones</th>
                 </tr>
@@ -162,7 +165,7 @@ export default function VisitantesActivosPage() {
               <tbody>
                 {filteredVisitantes.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-600 text-lg border-t border-[#8f8f8f]">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-600 text-lg border-t border-[#8f8f8f]">
                       No hay visitantes activos.
                     </td>
                   </tr>
@@ -176,11 +179,17 @@ export default function VisitantesActivosPage() {
                         {visitante.empresa || '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                        {(visitante as any).edificio?.num_edificio || '-'}
+                      </td>
+                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
+                        {(visitante as any).departamento?.num_departamento || '-'}
+                      </td>
+                      <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
                         {(() => {
-                          const horaEntrada = (visitante as any).accesos?.[0]?.hora_entrada;
+                          const horaEntrada = (visitante as any).hora_entrada || (visitante as any).accesos?.[0]?.hora_entrada;
                           if (horaEntrada) return formatearFecha(horaEntrada);
                           if (visitante.createdAt) return formatearFecha(visitante.createdAt);
-                          return new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                          return '-';
                         })()}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
@@ -285,7 +294,7 @@ export default function VisitantesActivosPage() {
                 <option value="">{formData.id_edificio_fk ? 'Seleccionar Departamento *' : 'Primero selecciona un edificio'}</option>
                 {filteredDepartamentos.map((dep) => (
                   <option key={dep.id_departamento} value={dep.id_departamento}>
-                    Departamento {dep.id_departamento}
+                    Departamento {dep.num_departamento || dep.id_departamento}
                   </option>
                 ))}
               </select>

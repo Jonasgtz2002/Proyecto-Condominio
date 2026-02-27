@@ -383,7 +383,16 @@ export const useStore = create<AppState>()(
         fetchEdificios: async () => {
           try {
             const res = await edificiosService.getAll();
-            set({ edificios: extractArray(res.data) });
+            const all = extractArray(res.data);
+            // Deduplicate by num_edificio, keeping the first occurrence
+            const seen = new Set<string>();
+            const unique = all.filter((e: any) => {
+              const key = String(e.num_edificio).trim();
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            set({ edificios: unique });
           } catch (e) { console.error('Error fetching edificios:', e); }
         },
 
@@ -734,9 +743,19 @@ export const useStore = create<AppState>()(
         // ────────────── CRUD Edificios ──────────────
         agregarEdificio: async (data) => {
           try {
+            const numEdificio = String(data.num_edificio).trim();
+            // Check if an edificio with the same num_edificio already exists
+            await get().fetchEdificios();
+            const existing = get().edificios.find(
+              (e) => String(e.num_edificio).trim() === numEdificio
+            );
+            if (existing) {
+              console.log('[agregarEdificio] Edificio already exists, reusing:', existing);
+              return existing;
+            }
             const payload = {
               ...data,
-              num_edificio: parseInt(data.num_edificio, 10),
+              num_edificio: parseInt(numEdificio, 10),
             };
             const res = await edificiosService.create(payload);
             await get().fetchEdificios();
@@ -761,6 +780,17 @@ export const useStore = create<AppState>()(
         // ────────────── CRUD Departamentos ──────────────
         agregarDepartamento: async (data) => {
           try {
+            const numDepto = String(data.num_departamento).trim();
+            const edificioId = Number(data.id_edificio_fk);
+            // Check if a departamento with the same num and edificio already exists
+            await get().fetchDepartamentos();
+            const existing = get().departamentos.find(
+              (d) => String(d.num_departamento).trim() === numDepto && d.id_edificio_fk === edificioId
+            );
+            if (existing) {
+              console.log('[agregarDepartamento] Departamento already exists, reusing:', existing);
+              return existing;
+            }
             const res = await departamentosService.create(data);
             await get().fetchDepartamentos();
             return res.data;
