@@ -110,6 +110,7 @@ export interface ApiEdificio {
 
 export interface ApiDepartamento {
   id_departamento: number;
+  num_departamento?: string;
   id_edificio_fk: number;
   edificio?: ApiEdificio;
   createdAt?: string;

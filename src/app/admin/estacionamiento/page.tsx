@@ -18,8 +18,8 @@ export default function EstacionamientoPage() {
 
   const getLabel = (espacio: typeof cajones[number]) => {
     const edif = espacio.departamento?.edificio?.num_edificio || '';
-    const depto = espacio.departamento?.id_departamento || espacio.id_departamento_fk || '';
-    if (edif || depto) return `${edif} - Depto #${depto}`;
+    const depto = espacio.departamento?.num_departamento || espacio.departamento?.id_departamento || espacio.id_departamento_fk || '';
+    if (edif || depto) return `Edif. ${edif} - Depto #${depto}`;
     return `Cajón ${espacio.id_cajon}`;
   };
 

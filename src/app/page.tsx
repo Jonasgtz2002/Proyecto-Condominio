@@ -22,17 +22,21 @@ export default function LoginPage() {
         try {
           await fetchMe();
         } catch {
-          // Token invalid, continue to login
+          // Token invalid — fetchMe already clears the session
         }
+      } else if (!token && session.isAuthenticated) {
+        // Stale persisted session with no token — clear it
+        useStore.getState().logout();
       }
       setInitialCheckDone(true);
     };
     checkSession();
   }, []);
 
-  // Redirect when session is authenticated (after initial check or after login)
+  // Redirect when session is authenticated (only after initial check is done)
   useEffect(() => {
-    if (!initialCheckDone && !isLoggingIn.current) return;
+    if (!initialCheckDone) return;
+    if (isLoggingIn.current) return;
     if (session.isAuthenticated && session.user?.rol) {
       const routes: Record<string, string> = {
         admin: '/admin/usuarios',
@@ -79,7 +83,7 @@ export default function LoginPage() {
     }
   };
 
-   
+
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -138,7 +142,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-      
+
       </div>
 
       <style jsx global>{`

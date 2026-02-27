@@ -16,11 +16,16 @@ export default function VigilanteLayout({
 
   useEffect(() => {
     const restoreSession = async () => {
-      if (!session.isAuthenticated) {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-        if (token) {
-          try { await fetchMe(); } catch { /* token inválido */ }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (token) {
+        try {
+          await fetchMe();
+        } catch {
+          // Token inválido — fetchMe already clears session
         }
+      } else if (session.isAuthenticated) {
+        // Stale persisted session with no token — clear it
+        logout();
       }
       setIsReady(true);
     };
@@ -28,10 +33,11 @@ export default function VigilanteLayout({
   }, []);
 
   useEffect(() => {
-    if (isReady && (!session.isAuthenticated || session.user?.rol !== 'vigilante')) {
-      router.push('/');
+    if (!isReady) return;
+    if (!session.isAuthenticated || session.user?.rol !== 'vigilante') {
+      router.replace('/');
     }
-  }, [isReady, session, router]);
+  }, [isReady, session.isAuthenticated, session.user?.rol]);
 
   if (!isReady || !session.isAuthenticated || session.user?.rol !== 'vigilante') {
     return (

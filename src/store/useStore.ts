@@ -736,7 +736,7 @@ export const useStore = create<AppState>()(
           try {
             const payload = {
               ...data,
-              num_edificio: String(data.num_edificio),
+              num_edificio: parseInt(data.num_edificio, 10),
             };
             const res = await edificiosService.create(payload);
             await get().fetchEdificios();

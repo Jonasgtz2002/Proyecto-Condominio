@@ -16,11 +16,11 @@ export default function AdminLayout({
 
   useEffect(() => {
     const restoreSession = async () => {
-      if (!session.isAuthenticated) {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-        if (token) {
-          try { await fetchMe(); } catch { /* token inválido */ }
-        }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (token) {
+        try { await fetchMe(); } catch { /* token inválido */ }
+      } else if (session.isAuthenticated) {
+        logout();
       }
       setIsReady(true);
     };
@@ -28,10 +28,11 @@ export default function AdminLayout({
   }, []);
 
   useEffect(() => {
-    if (isReady && (!session.isAuthenticated || session.user?.rol !== 'admin')) {
-      router.push('/');
+    if (!isReady) return;
+    if (!session.isAuthenticated || session.user?.rol !== 'admin') {
+      router.replace('/');
     }
-  }, [isReady, session, router]);
+  }, [isReady, session.isAuthenticated, session.user?.rol]);
 
   if (!isReady || !session.isAuthenticated || session.user?.rol !== 'admin') {
     return (

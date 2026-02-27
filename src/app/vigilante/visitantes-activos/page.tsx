@@ -176,7 +176,12 @@ export default function VisitantesActivosPage() {
                         {visitante.empresa || '-'}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f] text-[18px] text-[#292929]">
-                        {visitante.createdAt ? formatearFecha(visitante.createdAt) : 'N/A'}
+                        {(() => {
+                          const horaEntrada = (visitante as any).accesos?.[0]?.hora_entrada;
+                          if (horaEntrada) return formatearFecha(horaEntrada);
+                          if (visitante.createdAt) return formatearFecha(visitante.createdAt);
+                          return new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                        })()}
                       </td>
                       <td className="px-6 py-5 border-t border-[#8f8f8f]">
                         <button

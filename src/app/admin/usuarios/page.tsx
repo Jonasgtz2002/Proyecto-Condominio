@@ -12,7 +12,8 @@ export default function UsuariosPage() {
     agregarResidente, actualizarResidente, eliminarResidente,
     agregarUsuario, agregarEdificio, agregarDepartamento,
     agregarPago, actualizarPago,
-    agregarCajon,
+    agregarCajon, fetchCajones, actualizarCajon,
+    actualizarDepartamento,
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -130,9 +131,22 @@ export default function UsuariosPage() {
           const ed = await agregarEdificio({ num_edificio: formData.nuevoEdificio.trim() });
           finalEdificioId = ed?.id_edificio;
         }
-        if (crearDepartamento && finalEdificioId) {
-          const dp = await agregarDepartamento({ id_edificio_fk: finalEdificioId });
-          finalDeptoId = dp?.id_departamento;
+        if (crearDepartamento && formData.nuevoDepartamento.trim()) {
+          // In edit mode: update the existing department's num_departamento
+          // so the cajón (already linked to it) reflects the new number
+          const existingDeptoId = editingResidente.id_departamento_fk;
+          if (existingDeptoId) {
+            await actualizarDepartamento(existingDeptoId, {
+              num_departamento: formData.nuevoDepartamento.trim(),
+              ...(finalEdificioId ? { id_edificio_fk: finalEdificioId } : {}),
+            });
+            finalDeptoId = existingDeptoId;
+            console.log('[EDIT] Departamento actualizado num_departamento:', formData.nuevoDepartamento.trim());
+          } else if (finalEdificioId) {
+            // No existing dept — create new
+            const dp = await agregarDepartamento({ id_edificio_fk: finalEdificioId, num_departamento: formData.nuevoDepartamento.trim() });
+            finalDeptoId = dp?.id_departamento;
+          }
         }
 
         await actualizarResidente(editingResidente.id_residente, {
@@ -195,7 +209,7 @@ export default function UsuariosPage() {
             setSaving(false);
             return;
           }
-          const dp = await agregarDepartamento({ id_edificio_fk: finalEdificioId });
+          const dp = await agregarDepartamento({ id_edificio_fk: finalEdificioId, num_departamento: formData.nuevoDepartamento.trim() });
           console.log('Departamento creado:', dp);
           finalDeptoId = dp?.id_departamento;
           if (!finalDeptoId) {
@@ -503,7 +517,7 @@ export default function UsuariosPage() {
                           {residente.edificio?.num_edificio || '-'}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
-                          {residente.departamento?.id_departamento || '-'}
+                          {residente.departamento?.num_departamento || residente.departamento?.id_departamento || '-'}
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2] text-[17px] text-[#2a2a2a]">
                           {residente.usuario?.correo || '-'}
@@ -521,13 +535,12 @@ export default function UsuariosPage() {
                         </td>
                         <td className="px-6 py-5 border-t border-[#a2a2a2]">
                           <span
-                            className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[20px] sm:text-[16px] font-semibold ${
-                              estadoPago === 'pagado'
-                                ? 'bg-[#8BC46A] text-white'
-                                : estadoPago === 'sin_info'
+                            className={`inline-flex items-center rounded-2xl px-4 py-1.5 text-[20px] sm:text-[16px] font-semibold ${estadoPago === 'pagado'
+                              ? 'bg-[#8BC46A] text-white'
+                              : estadoPago === 'sin_info'
                                 ? 'bg-gray-400 text-white'
                                 : 'bg-[#ff5757] text-white'
-                            }`}
+                              }`}
                           >
                             {estadoPago === 'pagado' ? 'Pagado' : estadoPago === 'sin_info' ? 'Sin info' : 'Pago Vencido'}
                           </span>
@@ -644,7 +657,13 @@ export default function UsuariosPage() {
                     <input
                       type="text"
                       value={formData.nuevoEdificio}
-                      onChange={(e) => setFormData({ ...formData, nuevoEdificio: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (e.target.value !== val) {
+                          setError('El número de edificio solo puede contener dígitos');
+                        }
+                        setFormData({ ...formData, nuevoEdificio: val });
+                      }}
                       placeholder="Nº Edificio"
                       className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
                       required
@@ -686,7 +705,13 @@ export default function UsuariosPage() {
                   <input
                     type="text"
                     value={formData.nuevoDepartamento}
-                    onChange={(e) => setFormData({ ...formData, nuevoDepartamento: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (e.target.value !== val) {
+                        setError('El número de departamento solo puede contener dígitos');
+                      }
+                      setFormData({ ...formData, nuevoDepartamento: val });
+                    }}
                     placeholder="Nº Departamento"
                     className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
                     required
@@ -699,7 +724,7 @@ export default function UsuariosPage() {
                   >
                     <option value="">Seleccionar Departamento</option>
                     {departamentosFiltrados.map((d) => (
-                      <option key={d.id_departamento} value={d.id_departamento}>Depto #{d.id_departamento}</option>
+                      <option key={d.id_departamento} value={d.id_departamento}>Depto #{d.num_departamento || d.id_departamento}</option>
                     ))}
                   </select>
                 )}
