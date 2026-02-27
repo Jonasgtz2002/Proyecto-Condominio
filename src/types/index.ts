@@ -127,6 +127,7 @@ export interface ApiResidente {
   usuario?: ApiUser;
   departamento?: ApiDepartamento;
   edificio?: ApiEdificio;
+  matriculas?: ApiMatricula[];
   createdAt?: string;
   updatedAt?: string;
 }

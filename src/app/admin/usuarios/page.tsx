@@ -333,7 +333,7 @@ export default function UsuariosPage() {
         telefono: residente.telefono || '',
         id_edificio: residente.id_edificio_fk?.toString() || '',
         id_departamento: residente.id_departamento_fk?.toString() || '',
-        matricula: '',
+        matricula: residente.matriculas?.[0]?.matricula || '',
         nuevoEdificio: '',
         nuevoDireccion: '',
         nuevoDepartamento: '',
@@ -510,6 +510,7 @@ export default function UsuariosPage() {
                     <p><span className="font-semibold text-slate-600">Edificio:</span> {residente.edificio?.num_edificio || '-'}</p>
                     <p><span className="font-semibold text-slate-600">Depto:</span> {residente.departamento?.num_departamento || residente.departamento?.id_departamento || '-'}</p>
                     <p><span className="font-semibold text-slate-600">Tel:</span> {residente.telefono || '-'}</p>
+                    <p><span className="font-semibold text-slate-600">Matrícula:</span> {residente.matriculas?.map(m => m.matricula).join(', ') || '-'}</p>
                     <p><span className="font-semibold text-slate-600">Monto:</span> {pago ? `$${Number(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '-'}</p>
                     <p className="col-span-2"><span className="font-semibold text-slate-600">Próx. pago:</span> {pago?.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-MX') : '-'}</p>
                   </div>
@@ -539,22 +540,23 @@ export default function UsuariosPage() {
             <table className="w-full table-fixed border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#5f6ec9] text-white">
-                  <th className="w-[15%] text-left font-medium text-sm lg:text-base px-3 lg:px-6 py-4">Nombre</th>
-                  <th className="w-[8%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Edificio</th>
-                  <th className="w-[9%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Depto</th>
-                  <th className="w-[18%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Email</th>
-                  <th className="w-[11%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Teléfono</th>
-                  <th className="w-[9%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Monto</th>
-                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Próx. pago</th>
-                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Estatus</th>
-                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Acciones</th>
+                  <th className="w-[13%] text-left font-medium text-sm lg:text-base px-3 lg:px-4 py-4">Nombre</th>
+                  <th className="w-[7%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Edificio</th>
+                  <th className="w-[7%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Depto</th>
+                  <th className="w-[15%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Email</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Teléfono</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Matrícula</th>
+                  <th className="w-[8%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Monto</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Próx. pago</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Estatus</th>
+                  <th className="w-[10%] text-left font-medium text-sm lg:text-base px-2 lg:px-3 py-4">Acciones</th>
                 </tr>
               </thead>
 
               <tbody>
                 {filteredResidentes.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-10 text-center text-slate-600 text-lg">
+                    <td colSpan={10} className="px-6 py-10 text-center text-slate-600 text-lg">
                       No hay residentes para mostrar
                     </td>
                   </tr>
@@ -565,30 +567,33 @@ export default function UsuariosPage() {
 
                     return (
                       <tr key={residente.id_residente} className="bg-white">
-                        <td className="px-3 lg:px-6 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate">
+                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate">
                           {residente.nombre}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {residente.edificio?.num_edificio || '-'}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {residente.departamento?.num_departamento || residente.departamento?.id_departamento || '-'}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate">
                           {residente.usuario?.correo || '-'}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {residente.telefono || '-'}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a] truncate font-mono">
+                          {residente.matriculas?.map(m => m.matricula).join(', ') || '-'}
+                        </td>
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {pago ? `$${Number(pago.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '-'}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2] text-sm lg:text-[15px] text-[#2a2a2a]">
                           {pago?.fecha_vencimiento
                             ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-MX')
                             : '-'}
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2]">
                           <span
                             className={`inline-flex items-center rounded-2xl px-3 py-1 text-xs lg:text-sm font-semibold whitespace-nowrap ${estadoPago === 'pagado'
                               ? 'bg-[#8BC46A] text-white'
@@ -600,7 +605,7 @@ export default function UsuariosPage() {
                             {estadoPago === 'pagado' ? 'Pagado' : estadoPago === 'sin_info' ? 'Sin info' : 'Vencido'}
                           </span>
                         </td>
-                        <td className="px-3 lg:px-4 py-4 border-t border-[#a2a2a2]">
+                        <td className="px-2 lg:px-3 py-4 border-t border-[#a2a2a2]">
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => openModal(residente)}
