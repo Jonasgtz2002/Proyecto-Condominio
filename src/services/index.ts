@@ -11,3 +11,4 @@ export { matriculasService } from './matriculas.service';
 export { accesosService } from './accesos.service';
 export { pagosService } from './pagos.service';
 export { anunciosService } from './anuncios.service';
+export { passwordService } from './password.service';

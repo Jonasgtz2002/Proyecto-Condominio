@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -132,12 +133,12 @@ export default function LoginPage() {
             </button>
 
             <div className="text-center">
-              <button
-                type="button"
-                className="text-white hover:text-gray-200 transition-colors text-base"
+              <Link
+                href="/password"
+                className="inline-block text-white hover:text-gray-200 transition-colors text-base"
               >
                 ¿Olvidaste tu contraseña?
-              </button>
+              </Link>
             </div>
           </form>
         </div>
