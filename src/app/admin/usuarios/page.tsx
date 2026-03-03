@@ -639,15 +639,6 @@ export default function UsuariosPage() {
           </div>
         </div>
 
-        {/* FAB + */}
-        <button
-          type="button"
-          onClick={() => openModal()}
-          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 h-16 w-16 sm:h-[92px] sm:w-[92px] rounded-full bg-[#5f6ec9] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
-          title="Nuevo Residente"
-        >
-          <Plus className="h-8 w-8 sm:h-12 sm:w-12" />
-        </button>
       </div>
 
       {/* Modal */}
@@ -757,9 +748,14 @@ export default function UsuariosPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className={`space-y-2 ${!(formData.id_edificio || (crearEdificio && formData.nuevoEdificio.trim())) ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700">Departamento</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Departamento
+                    {!(formData.id_edificio || (crearEdificio && formData.nuevoEdificio.trim())) && (
+                      <span className="ml-2 text-xs font-normal text-gray-400">Primero selecciona un edificio</span>
+                    )}
+                  </label>
                   <button
                     type="button"
                     onClick={() => { setCrearDepartamento(!crearDepartamento); setFormData({ ...formData, id_departamento: '', nuevoDepartamento: '' }); }}
@@ -801,10 +797,11 @@ export default function UsuariosPage() {
                 type="text"
                 value={formData.matricula}
                 onChange={(e) =>
-                  setFormData({ ...formData, matricula: e.target.value.toUpperCase() })
+                  setFormData({ ...formData, matricula: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 10) })
                 }
                 placeholder="Matrícula (opcional)"
-                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9]"
+                maxLength={10}
+                className="w-full h-11 rounded-lg border border-slate-300 px-3 outline-none focus:ring-2 focus:ring-[#5f6ec9] font-mono"
               />
 
               {!editingResidente && (

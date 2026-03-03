@@ -62,7 +62,7 @@ export default function LoginPage() {
 
       if (user) {
         const routes: Record<string, string> = {
-          admin: '/admin',
+          admin: '/admin/pagos',
           vigilante: '/vigilante',
           residente: '/residente',
         };

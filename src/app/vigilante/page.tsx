@@ -17,7 +17,9 @@ import { vigilantesService } from '@/services/vigilantes.service';
 export default function VigilantePage() {
   const {
     accesosHoy,
+    accesos,
     fetchAccesosActivos,
+    fetchAccesos,
     registrarAcceso,
     registrarSalidaAcceso,
     buscarMatriculaEnAPI,
@@ -60,7 +62,7 @@ export default function VigilantePage() {
     };
 
     resolveVigilanteId();
-    Promise.all([fetchAccesosActivos(), fetchCajones()]).finally(() => setLoadingAccesos(false));
+    Promise.all([fetchAccesosActivos(), fetchAccesos(), fetchCajones()]).finally(() => setLoadingAccesos(false));
   }, []);
 
   // Determine if the searched matrícula is currently inside
@@ -164,7 +166,7 @@ export default function VigilantePage() {
       }
 
       setResultado('exit-registered');
-      await Promise.all([fetchAccesosActivos(), fetchCajones()]);
+      await Promise.all([fetchAccesosActivos(), fetchAccesos(), fetchCajones()]);
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.message || 'Error al registrar salida';
       setErrorMsg(typeof msg === 'string' ? msg : JSON.stringify(msg));
@@ -430,11 +432,11 @@ export default function VigilantePage() {
           </div>
         </section>
 
-        {/* Accesos activos (actualmente dentro) */}
+        {/* Registro de accesos */}
         <section className="space-y-4">
           <div className="w-full rounded-xl bg-[#6272c8] py-2.5 px-4">
             <h3 className="text-white font-bold text-[clamp(1.1rem,2vw,2rem)]">
-              Accesos Activos (dentro del condominio)
+              Registro de accesos
             </h3>
           </div>
 
@@ -442,7 +444,7 @@ export default function VigilantePage() {
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
                 <tr>
-                  {['Matrícula', 'Residente / Visitante', 'Hora Entrada', 'Edificio', 'Estado'].map((h) => (
+                  {['Matrícula', 'Residente / Visitante', 'Hora Entrada', 'Hora Salida', 'Edificio', 'Estado'].map((h) => (
                     <th
                       key={h}
                       className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-[clamp(.9rem,1.2vw,1.8rem)] font-extrabold"
@@ -456,7 +458,7 @@ export default function VigilantePage() {
                 {loadingAccesos ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="border-[3px] border-[#9a9a9a] bg-white px-4 py-4 text-center text-sm md:text-base text-gray-600"
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -465,23 +467,27 @@ export default function VigilantePage() {
                       </div>
                     </td>
                   </tr>
-                ) : accesosHoy.length === 0 ? (
+                ) : accesos.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="border-[3px] border-[#9a9a9a] bg-white px-4 py-4 text-center text-sm md:text-base text-gray-600"
                     >
-                      No hay accesos activos en este momento
+                      No hay registros de accesos
                     </td>
                   </tr>
                 ) : (
-                  accesosHoy.map((a) => {
+                  accesos.map((a) => {
                     const mat = a.matricula || a.matriculaRel;
                     const persona = mat?.residente?.nombre || a.visitante?.nombre || 'N/A';
                     const edificio = mat?.residente?.edificio?.num_edificio || 'N/A';
                     const horaEntrada = a.hora_entrada
                       ? new Date(a.hora_entrada).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
                       : 'N/A';
+                    const horaSalida = a.hora_salida
+                      ? new Date(a.hora_salida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                      : '-';
+                    const estaDentro = !a.hora_salida;
 
                     return (
                       <tr key={a.id_accesos}>
@@ -495,11 +501,18 @@ export default function VigilantePage() {
                           {horaEntrada}
                         </td>
                         <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">
+                          {horaSalida}
+                        </td>
+                        <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">
                           {edificio}
                         </td>
                         <td className="border-[3px] border-[#9a9a9a] bg-white px-3 py-2 text-sm md:text-base">
-                          <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">
-                            Dentro
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            estaDentro
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {estaDentro ? 'Dentro' : 'Salió'}
                           </span>
                         </td>
                       </tr>

@@ -430,15 +430,6 @@ export default function VigilantesPage() {
           </div>
         </div>
 
-        {/* FAB */}
-        <button
-          type="button"
-          onClick={() => openModal()}
-          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 h-16 w-16 sm:h-[102px] sm:w-[102px] rounded-full bg-[#5d6bc7] text-white shadow-xl inline-flex items-center justify-center hover:brightness-110 transition"
-          title="Nuevo"
-        >
-          <Plus className="h-14 w-14" />
-        </button>
       </div>
 
       {/* Modal */}
